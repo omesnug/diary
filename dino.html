@@ -1,0 +1,2904 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DINO UFO - Space Runner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+KR:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: none;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0d17;
+            font-family: 'Press Start 2P', 'Noto Sans KR', monospace;
+            color: #e8eaed;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #0b0d17;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .pixel-btn {
+            background-color: #161b2e;
+            color: #f8fafc;
+            border: 3px solid #64748b;
+            box-shadow: 4px 4px 0px #020617;
+            transition: transform 0.05s, box-shadow 0.05s, border-color 0.1s;
+            cursor: pointer;
+            font-family: 'Noto Sans KR', 'Press Start 2P', sans-serif;
+            font-weight: 900;
+        }
+        .pixel-btn:hover {
+            border-color: #38bdf8;
+        }
+        .pixel-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #020617;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Main Pixel Game Canvas -->
+        <canvas id="gameCanvas"></canvas>
+        <!-- Ending Overlay -->
+        <div id="endingOverlay" class="fixed inset-0 z-40 flex items-center justify-center bg-black pointer-events-none"
+             style="opacity:0; transition: opacity 3s ease;">
+            <div id="endingText" class="text-center px-6 font-sans leading-9 text-white text-sm sm:text-lg"
+                 style="opacity:0; transition: opacity 1.5s ease;">
+                <div>애타게 찾던 엄마 다이노와 함께</div>
+                <div>집으로 무사히 돌아갔습니다... happy end!</div>
+                <div class="mt-6 text-[#38bdf8] tracking-widest">- E N D -</div>
+                <div class="mt-8 text-[11px] text-[#94a3b8]">터치로 다시 시작</div>
+            </div>
+        </div>
+        <!-- Top-Right Pixel Speaker Icon Button -->
+        <div class="fixed top-2.5 right-3 z-30 flex items-center gap-2">
+            <button id="soundBtn" aria-label="효과음 켜기/끄기" title="효과음 켜기/끄기" class="pixel-btn w-9 h-9 p-1.5 flex items-center justify-center rounded-sm border-[#38bdf8]">
+                <svg id="speakerIconSvg" viewBox="0 0 16 16" class="w-5 h-5" shape-rendering="crispEdges">
+                    <!-- Speaker cone -->
+                    <rect x="2" y="6" width="3" height="4" fill="#38bdf8"/>
+                    <rect x="5" y="5" width="2" height="6" fill="#38bdf8"/>
+                    <rect x="7" y="3" width="2" height="10" fill="#38bdf8"/>
+                    <!-- Sound waves (shown when ON) -->
+                    <g id="speakerWaves">
+                        <rect x="10" y="6" width="1" height="4" fill="#bae6fd"/>
+                        <rect x="12" y="4" width="1" height="8" fill="#38bdf8"/>
+                        <rect x="14" y="5" width="1" height="6" fill="#bae6fd"/>
+                    </g>
+                    <!-- Diagonal Slash (shown when OFF) -->
+                    <g id="speakerSlash" class="hidden">
+                        <rect x="2" y="2" width="2" height="2" fill="#ff2a2a"/>
+                        <rect x="4" y="4" width="2" height="2" fill="#ff2a2a"/>
+                        <rect x="6" y="6" width="2" height="2" fill="#ff2a2a"/>
+                        <rect x="8" y="8" width="2" height="2" fill="#ff2a2a"/>
+                        <rect x="10" y="10" width="2" height="2" fill="#ff2a2a"/>
+                        <rect x="12" y="12" width="2" height="2" fill="#ff2a2a"/>
+                    </g>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Start / Title Overlay -->
+<div id="startOverlay" class="fixed inset-0 z-20 flex flex-col items-center justify-center pointer-events-none px-0 text-center">
+<div class="bg-[#111629]/95 p-5 sm:p-7 border-4 border-[#38bdf8] shadow-[6px_6px_0px_#020617] max-w-2xl w-full pointer-events-auto">
+                <div class="text-[11px] sm:text-xs tracking-widest mb-1 text-[#38bdf8] font-bold">SPACE ARCADE EDITION</div>
+                <h1 class="text-xl sm:text-2xl font-bold mb-4 leading-relaxed text-white">DINO UFO</h1>
+                
+                <div class="text-xs leading-6 mb-5 text-left border-y-2 border-dashed border-[#334155] py-3 space-y-1.5 font-sans">
+                    <div>◀ <strong class="text-[#38bdf8]">좌측 터치 (꾹 누르기)</strong>: 상승합니다</div>
+                    <div>◀ <strong class="text-[#38bdf8]">좌측 2연타 (더블탭)</strong>: 점프합니다</div>
+                    <div>▶ <strong class="text-[#fbbf24]">우측 터치 (터치 / 꾹)</strong>: 공격합니다</div>
+                    <div class="text-[#94a3b8] text-[11px] pt-1">* 10,000점 도달 시 게임 클리어!</div>
+                </div>
+
+                <button id="startBtn" class="pixel-btn w-full py-3.5 text-sm sm:text-base tracking-wider border-[#38bdf8] text-[#38bdf8]">
+                    ▶ 게임 시작
+                </button>
+                <div class="text-[11px] mt-3 text-[#94a3b8] font-sans">
+                    엄마를 찾던 다이노, 결국 우주까지 찾아 나서게 되는데..!
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div id="gameOverOverlay" class="hidden fixed inset-0 z-20 flex flex-col items-center justify-center px-4 text-center bg-black/50">
+            <div class="bg-[#111629] p-6 sm:p-8 border-4 border-[#ff2a2a] shadow-[6px_6px_0px_#020617] max-w-sm w-full">
+                <h2 class="text-lg sm:text-2xl font-bold mb-4 tracking-wider text-[#ff2a2a]">G A M E  O V E R</h2>
+                
+                <div class="space-y-3 text-xs sm:text-sm my-5 py-3 border-y-2 border-[#334155] font-sans">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[#94a3b8]">현재 점수</span>
+                        <span id="finalScore" class="font-bold text-white text-base">00000</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-[#94a3b8]">최고기록</span>
+                        <span id="finalHighScore" class="font-bold text-[#fbbf24] text-base">00000</span>
+                    </div>
+                </div>
+
+                <button id="retryBtn" class="pixel-btn w-full py-3.5 text-sm sm:text-base tracking-wider flex items-center justify-center gap-2 border-[#ff2a2a] text-white">
+                    <span>↻</span> 다시 도전
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * DINO UFO: SPACE RUNNER (FULL VERSION)
+         * - True Multi-Touch (Independent Left Flight & Right Auto-Fire) + Simultaneous Keyboard/Mouse
+         * - Permanent Deep Space Night Theme with Multi-Color Pixel Art
+         * - Exact Chrome Dino Silhouette inside UFO Dome + Top Antenna Laser & Side Weapon Pods
+         * - Red-Outlined Enemies & Bosses (Every 1,000 pts, HP = level * 100) with Red HP Bars
+         * - 3 Metal Slug-style Floating Weapon Crates (Yellow Missile, Orange Shotgun, Lime 3-Way)
+         */
+
+        // ==========================================
+        // 1. 8-BIT RETRO WEB AUDIO SYNTHESIZER
+        // ==========================================
+        class RetroAudio {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playWeaponSound(weaponType) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                if (weaponType === 'missile') {
+                    // Heavy rocket ignition sound (sawtooth + low drop)
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(75, now + 0.18);
+                    gain.gain.setValueAtTime(0.11, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.18);
+                } else if (weaponType === 'shotgun') {
+                    // Punchy scatter blast
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(480, now);
+                    osc.frequency.exponentialRampToValueAtTime(95, now + 0.09);
+                    gain.gain.setValueAtTime(0.09, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                } else if (weaponType === 'spread') {
+                    // Crisp twin-barrel triple beam
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(1150, now);
+                    osc.frequency.exponentialRampToValueAtTime(340, now + 0.1);
+                    gain.gain.setValueAtTime(0.09, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else {
+                    // Default antenna laser
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(980, now);
+                    osc.frequency.exponentialRampToValueAtTime(240, now + 0.09);
+                    gain.gain.setValueAtTime(0.07, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                }
+            }
+
+            playPowerup() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const notes = [523.25, 659.25, 783.99, 1046.5];
+                notes.forEach((freq, idx) => {
+                    const now = this.ctx.currentTime + idx * 0.055;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(freq, now);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                });
+            }
+
+            playHeal() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const notes = [587.33, 880, 1174.66];
+                notes.forEach((freq, idx) => {
+                    const now = this.ctx.currentTime + idx * 0.06;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now);
+                    gain.gain.setValueAtTime(0.11, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                });
+            }
+
+            playHop() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(270, now);
+                osc.frequency.exponentialRampToValueAtTime(640, now + 0.11);
+
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.11);
+            }
+
+            playExplosion(isBig = false) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const duration = isBig ? 0.38 : 0.16;
+                const bufferSize = this.ctx.sampleRate * duration;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+
+                let lastVal = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    if (i % 6 === 0) lastVal = Math.random() * 2 - 1;
+                    data[i] = lastVal;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(isBig ? 380 : 780, this.ctx.currentTime);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(isBig ? 0.18 : 0.09, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start();
+            }
+
+            playBossWarning() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                for (let i = 0; i < 3; i++) {
+                    const now = this.ctx.currentTime + i * 0.18;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(110, now + 0.14);
+                    gain.gain.setValueAtTime(0.11, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                }
+            }
+
+            playGameOver() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const notes = [330, 293.66, 261.63, 196];
+                notes.forEach((freq, idx) => {
+                    const now = this.ctx.currentTime + idx * 0.11;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(freq, now);
+                    gain.gain.setValueAtTime(0.09, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                });
+            }
+        }
+
+        const audio = new RetroAudio();
+
+        // ==========================================
+        // 2. CANVAS SETUP (PERMANENT SPACE NIGHT)
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const LOGICAL_HEIGHT = 360;
+        let logicalWidth = 640;
+        let renderScale = 1;
+        const MIN_LOGICAL_WIDTH = 560;
+        let renderOffsetY = 0;
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            const rect = container.getBoundingClientRect();
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+            canvas.width = Math.floor(rect.width * dpr);
+            canvas.height = Math.floor(rect.height * dpr);
+
+            renderScale = Math.min(canvas.height / LOGICAL_HEIGHT, canvas.width / MIN_LOGICAL_WIDTH);
+            logicalWidth = canvas.width / renderScale;
+            renderOffsetY = Math.max(0, (canvas.height - LOGICAL_HEIGHT * renderScale) / 2);
+
+            ctx.imageSmoothingEnabled = false;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // ==========================================
+        // 3. PIXEL ART MATRICES & WEAPON DEFINITIONS
+        // ==========================================
+        // Exact Chrome Dino Pixel Grid (UNALTERED SILHOUETTE)
+        const DINO_SPRITE = [
+            "0000000011111110",
+            "0000000111111111",
+            "0000000110111111",
+            "0000000111111111",
+            "0000000111111111",
+            "0000000111110000",
+            "0000000111111100",
+            "1000001111100000",
+            "1000011111100000",
+            "1100111111111000",
+            "1111111111101000",
+            "1111111111100000",
+            "0111111111100000",
+            "0011111111000000",
+            "0001111110000000"
+        ];
+
+        // Red Pixel Heart (9x8)
+        const HEART_FULL = [
+            "011000110",
+            "111101111",
+            "111111111",
+            "111111111",
+            "011111110",
+            "001111100",
+            "000111000",
+            "000010000"
+        ];
+
+        const HEART_EMPTY = [
+            "011000110",
+            "100101001",
+            "100010001",
+            "100000001",
+            "010000010",
+            "001000100",
+            "000101000",
+            "000010000"
+        ];
+
+        // Small Kamikaze Alien UFO (16x10)
+        const ALIEN_UFO = [
+            "0000001111000000",
+            "0000111001110000",
+            "0001111111111000",
+            "0011111111111100",
+            "0111111111111110",
+            "1101101111011011",
+            "1111111111111111",
+            "0111111111111110",
+            "0001100000011000",
+            "0010000000000100"
+        ];
+
+        // Stationary Gunship (18x12)
+        const GUNSHIP_SPRITE = [
+            "000000001111110000",
+            "000000111111111000",
+            "000011111111111100",
+            "001111110011111110",
+            "111111110011111111",
+            "111111111111111111",
+            "111111111111111111",
+            "001111111111111110",
+            "000011111111111100",
+            "000000111111111000",
+            "000000001111110000",
+            "000000000111100000"
+        ];
+
+        // Evil Fierce Dino Silhouette for Stage 5 Final Boss (16x15, angry brow & jagged fangs)
+        const EVIL_DINO_SPRITE = [
+            "0000000011111110",
+            "0000000111111111",
+            "0000000101111111",
+            "0000000110111111",
+            "0000000111111111",
+            "0000000110101000",
+            "0000000111111100",
+            "1000001111100000",
+            "1000011111100000",
+            "1100111111111000",
+            "1111111111101000",
+            "1111111111100000",
+            "0111111111100000",
+            "0011111111000000",
+            "0001111110000000"
+        ];
+
+        // Rebalanced Weapon Specs
+        const WEAPONS = {
+            default: {
+                id: 'default',
+                name: '기본 레이저',
+                color: '#38bdf8',
+                damage: 4,
+                cooldown: 0.18,
+                ammoPerPickup: Infinity
+            },
+            missile: {
+                id: 'missile',
+                name: '차르미사일',
+                color: '#ffd60a',
+                borderColor: '#b45309',
+                damage: 16,
+                cooldown: 0.34,
+                ammoPerPickup: 50
+            },
+            shotgun: {
+                id: 'shotgun',
+                name: '슈퍼머신건',
+                color: '#ff7b00',
+                borderColor: '#9a3412',
+                damage: 4,
+                cooldown: 0.04, //
+                ammoPerPickup: 200
+            },
+            spread: {
+                id: 'spread',
+                name: '삼발레이저',
+                color: '#70e000',
+                borderColor: '#3f6212',
+                damage: 6, // 5 damage per bullet
+                cooldown: 0.27,
+                ammoPerPickup: 100
+            }
+        };
+
+        function drawMatrix(matrix, x, y, pixelSize, color) {
+            ctx.fillStyle = color;
+            for (let r = 0; r < matrix.length; r++) {
+                const row = matrix[r];
+                for (let c = 0; c < row.length; c++) {
+                    if (row[c] === '1') {
+                        ctx.fillRect(
+                            Math.round(x + c * pixelSize),
+                            Math.round(y + r * pixelSize),
+                            pixelSize,
+                            pixelSize
+                        );
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 4. GAME STATE & ENTITIES
+        // ==========================================
+        const GAME_STATE = {
+            START: 'START',
+            PLAYING: 'PLAYING',
+            GAMEOVER: 'GAMEOVER'
+        };
+
+        let currentState = GAME_STATE.START;
+        let score = 0;
+        let highScore = 0;
+        try { highScore = parseInt(localStorage.getItem('dino_ufo_hi_score') || '0', 10) || 0; } catch (e) {}
+        let nextBossScore = 1000;
+        let bossStage = 0; // 1..5
+        let isInvertedMode = false; // Activated after defeating Stage 5 Final Boss
+        let itemSpawnTimer = 0;
+        let hmgStaggerToggle = 0;
+
+        const CEILING_Y = 44;
+        const FLOOR_Y = LOGICAL_HEIGHT - 24;
+        const BASE_SCROLL_SPEED = 235;
+
+        const player = {
+            x: 56, // Positioned at ~2.3/3 ratio relative to previous 80 (plenty of forward view + rear thruster room)
+            y: LOGICAL_HEIGHT / 2 - 22,
+            width: 58,
+            height: 46,
+            vy: 0,
+            gravity: 920,
+            thrustAccel: -1950,
+            maxFallSpeed: 360,
+            maxRiseSpeed: -330,
+            hopImpulse: -315,
+            hearts: 3,
+            maxHearts: 3,
+            invincibleTimer: 0,
+            weapon: 'default',
+            ammo: Infinity,
+            fireCooldown: 0,
+            muzzleFlashTimer: 0,
+            tiltAngle: 0
+        };
+
+        // True Simultaneous Input State (Multi-Touch + Keyboard + Mouse)
+        const input = {
+            leftTouches: new Set(),
+            rightTouches: new Set(),
+            leftKeys: new Set(),
+            rightKeys: new Set(),
+            leftMouseDown: false,
+            rightMouseDown: false,
+            lastLeftTapTime: 0,
+            doubleTapThreshold: 265,
+            touchHintAlpha: 1.0
+        };
+
+        function isLeftActive() {
+            return input.leftTouches.size > 0 || input.leftKeys.size > 0 || input.leftMouseDown;
+        }
+
+        function isRightActive() {
+            return input.rightTouches.size > 0 || input.rightKeys.size > 0 || input.rightMouseDown;
+        }
+
+        // World Entities
+        let projectiles = [];
+        let enemyProjectiles = [];
+        let enemyBeams = []; // Stage 3 Boss 3-second straight laser beams
+        let obstacles = [];
+        let enemies = [];
+        let powerups = [];
+        let heartPickups = [];
+        let bosses = []; // Array supports Stage 4 Dual Bosses!
+        let dashWalls = []; // Post-Stage-5 Geometry Dash indestructible terrain blocks
+let dashHazards = []; // 지뢰
+let pendingMine = null; // 직전에 배치한 지뢰 정보 (다음 벽 위치 보정용)
+        let particles = [];
+        let floatingTexts = [];
+        let stars = [];
+        let planets = [];
+        let terrainTicks = [];
+
+        let obstacleSpawnTimer = 1.0;
+        let enemySpawnTimer = 2.5;
+        let lastCorridorCenterY = LOGICAL_HEIGHT / 2;
+        let dashPatternStep = 0;
+        let screenShakeTimer = 0;
+let frameCounter = 0;
+let gameOverAt = 0;
+const RESTART_DELAY_MS = 700;
+function tryRestart() {
+    if (performance.now() - gameOverAt < RESTART_DELAY_MS) return;
+    startGame();
+}
+let endingPhase = 0;   // 0:없음 1:엄마 등장 2:대치 3:페이드아웃 4:END
+let endingTimer = 0;
+const mom = { x: 0, y: 0, scale: 2.6 };
+
+function startEnding() {
+    endingPhase = 1;
+    endingTimer = 0;
+    dashWalls.forEach(w => spawnParticles(w.x + w.width / 2, w.y + w.height / 2, 6, '#38bdf8', 0.8));
+    dashWalls = [];
+    dashHazards = [];
+    pendingMine = null;
+    enemyProjectiles = [];
+    mom.x = logicalWidth + 180;
+    addFloatingText(logicalWidth / 2 - 50, LOGICAL_HEIGHT / 2 - 70, '익숙한 우주선이 보인다...', '#ffffff');
+    audio.playPowerup();
+}
+
+function updateEnding(dt) {
+    endingTimer += dt;
+    mom.y = LOGICAL_HEIGHT / 2 + Math.sin(frameCounter * 0.05) * 5;
+    if (endingPhase === 1) {
+        mom.x += ((logicalWidth - 100) - mom.x) * Math.min(1, 1.8 * dt);
+        if (endingTimer > 3.2) {
+            endingPhase = 2; endingTimer = 0;
+            audio.playBossWarning();
+            addFloatingText(logicalWidth / 2 - 30, LOGICAL_HEIGHT / 2 - 90, '엄마다..!', '#fde047');
+        }
+    } else if (endingPhase === 2) {
+        if (endingTimer > 2.5) {
+            endingPhase = 3; endingTimer = 0;
+            document.getElementById('endingOverlay').style.opacity = '1';
+        }
+    } else if (endingPhase === 3) {
+        if (endingTimer > 3.2) {
+            endingPhase = 4;
+            document.getElementById('endingText').style.opacity = '1';
+            try { localStorage.setItem('dino_ufo_hi_score', highScore.toString()); } catch (e) {}
+            gameOverAt = performance.now();
+            currentState = GAME_STATE.GAMEOVER; // Space/Enter로 재시작 가능
+        }
+    }
+}
+
+// 플레이어 UFO 그리기 함수를 재활용해 "좌우 반전 + 확대"한 엄마 UFO
+function drawMomUFO() {
+    const cx = mom.x, cy = mom.y;
+    const saved = { x: player.x, y: player.y, inv: player.invincibleTimer,
+                    w: player.weapon, m: player.muzzleFlashTimer, t: player.tiltAngle };
+    player.x = cx - player.width / 2;
+    player.y = cy - player.height / 2;
+    player.invincibleTimer = 0; player.weapon = 'default';
+    player.muzzleFlashTimer = 0; player.tiltAngle = 0;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(-mom.scale, mom.scale);   // 왼쪽을 바라보는 거대 UFO
+    ctx.translate(-cx, -cy);
+    drawPlayerUFODino();
+    ctx.restore();
+
+    Object.assign(player, { x: saved.x, y: saved.y, invincibleTimer: saved.inv,
+                            weapon: saved.w, muzzleFlashTimer: saved.m, tiltAngle: saved.t });
+}
+
+        // ==========================================
+        // 5. SPACE BACKGROUND INITIALIZATION
+        // ==========================================
+        function initBackground() {
+            const starColors = ['#94a3b8', '#64748b', '#cbd5e1', '#7dd3fc', '#a5b4fc'];
+            stars = [];
+            for (let i = 0; i < 65; i++) {
+                stars.push({
+                    x: Math.random() * 1400,
+                    y: CEILING_Y + 6 + Math.random() * (FLOOR_Y - CEILING_Y - 12),
+                    size: Math.random() < 0.78 ? 2 : 3,
+                    color: starColors[Math.floor(Math.random() * starColors.length)],
+                    speedFactor: 0.12 + Math.random() * 0.25,
+                    blinkOffset: Math.random() * 100
+                });
+            }
+
+            // Subtle, dark-shaded, well-rounded pixel planets that never distract from bullets
+            planets = [
+                { x: 240, y: 112, radius: 18, color: '#1e293b', highlight: '#334155', ringColor: '#334155', hasRing: true, speedFactor: 0.06 },
+                { x: 580, y: 235, radius: 13, color: '#272038', highlight: '#3b3054', ringColor: null, hasRing: false, speedFactor: 0.045 },
+                { x: 920, y: 135, radius: 22, color: '#29221c', highlight: '#3f342b', ringColor: '#473c32', hasRing: true, speedFactor: 0.07 }
+            ];
+
+            terrainTicks = [];
+            for (let x = 0; x < 1600; x += 20) {
+                terrainTicks.push({
+                    x,
+                    w: 5 + Math.floor(Math.random() * 10),
+                    offsetY: Math.floor(Math.random() * 6) + 3,
+                    isTop: Math.random() < 0.5
+                });
+            }
+        }
+
+        // ==========================================
+        // 6. PLAYER FLIGHT & WEAPON FIRING
+        // ==========================================
+        function updatePlayerAnchorX() {
+            // Keep player at 2.3/3 proportional forward position (~11% of logical width, min 52px for rear thruster space)
+            player.x = Math.max(52, Math.round(logicalWidth * 0.115));
+        }
+
+        function triggerLeftPress() {
+            if (currentState !== GAME_STATE.PLAYING) return;
+            const now = performance.now();
+            if (now - input.lastLeftTapTime <= input.doubleTapThreshold) {
+                // Quick Double-Tap -> Crisp UFO Hop
+                player.vy = player.hopImpulse;
+                audio.playHop();
+                spawnThrusterBurst(player.x + 28, player.y + player.height, 9);
+                input.lastLeftTapTime = 0;
+            } else {
+                input.lastLeftTapTime = now;
+            }
+        }
+
+        function fireCurrentWeapon() {
+            if (currentState !== GAME_STATE.PLAYING) return;
+            if (player.fireCooldown > 0) return;
+
+            const wSpec = WEAPONS[player.weapon] || WEAPONS.default;
+            player.fireCooldown = wSpec.cooldown;
+            player.muzzleFlashTimer = 0.07;
+
+            const topAntennaX = player.x + 32;
+            const topAntennaY = player.y + 1;
+            const sidePodX = player.x + 48;
+            const sidePodY = player.y + 30;
+
+            if (player.weapon === 'missile') {
+                projectiles.push({
+                    kind: 'missile',
+                    x: sidePodX,
+                    y: sidePodY - 3,
+                    vx: 500,
+                    vy: 0,
+                    width: 18,
+                    height: 7,
+                    damage: wSpec.damage,
+                    color: wSpec.color
+                });
+                audio.playWeaponSound('missile');
+            } else if (player.weapon === 'shotgun') {
+                // Metal Slug Heavy Machine Gun style: rapid straight horizontal stream with slight vertical Y stagger!
+                const staggerOffsets = [-4, 2, -1, 4];
+                const yOffset = staggerOffsets[hmgStaggerToggle % staggerOffsets.length];
+                hmgStaggerToggle++;
+
+                projectiles.push({
+                    kind: 'shotgun',
+                    x: sidePodX,
+                    y: sidePodY - 2 + yOffset,
+                    vx: 680,
+                    vy: 0,
+                    width: 16,
+                    height: 4,
+                    damage: wSpec.damage,
+                    color: wSpec.color
+                });
+                audio.playWeaponSound('shotgun');
+            } else if (player.weapon === 'spread') {
+                // Lime green twin-barrel 3-way spread (damage 5 per bullet, 100 ammo)
+                const angles = [-165, 0, 165];
+                angles.forEach(vy => {
+                    projectiles.push({
+                        kind: 'spread',
+                        x: sidePodX,
+                        y: sidePodY - 2,
+                        vx: 590,
+                        vy: vy,
+                        width: 14,
+                        height: 4,
+                        damage: wSpec.damage,
+                        color: wSpec.color
+                    });
+                });
+                audio.playWeaponSound('spread');
+            } else {
+                // Default Infinite Antenna Laser (Damage 4)
+                projectiles.push({
+                    kind: 'default',
+                    x: topAntennaX,
+                    y: topAntennaY,
+                    vx: 660,
+                    vy: 0,
+                    width: 18,
+                    height: 3,
+                    damage: wSpec.damage,
+                    color: wSpec.color
+                });
+                audio.playWeaponSound('default');
+            }
+
+            if (player.weapon !== 'default') {
+                player.ammo -= 1;
+                if (player.ammo <= 0) {
+                    player.weapon = 'default';
+                    player.ammo = Infinity;
+                    addFloatingText(player.x + 20, player.y - 8, '기본 레이저 복귀', '#38bdf8');
+                }
+            }
+        }
+
+        // ==========================================
+        // 7. TRUE SIMULTANEOUS MULTI-TOUCH & KEYBOARD/MOUSE
+        // ==========================================
+        function updateTouches(e) {
+            e.preventDefault();
+            audio.init();
+
+            const rect = canvas.getBoundingClientRect();
+            const halfWidth = rect.width / 2;
+
+
+            input.leftTouches.clear();
+            input.rightTouches.clear();
+
+            for (let i = 0; i < e.touches.length; i++) {
+                const t = e.touches[i];
+                const relX = t.clientX - rect.left;
+                if (relX < halfWidth) {
+                    input.leftTouches.add(t.identifier);
+                } else {
+                    input.rightTouches.add(t.identifier);
+                }
+            }
+
+            if (e.type === 'touchstart') {
+                // 엔딩 종료 후 화면 터치로 재시작
+                if (currentState === GAME_STATE.GAMEOVER && endingPhase === 4) {
+                    tryRestart();
+                    return;
+                }
+                // 새로 닿은 손가락이 좌측일 때만 더블탭(홉) 판정
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].clientX - rect.left < halfWidth) {
+                        triggerLeftPress();
+                        break;
+                    }
+                }
+            }
+        }
+
+        canvas.addEventListener('touchstart', updateTouches, { passive: false });
+        canvas.addEventListener('touchmove', updateTouches, { passive: false });
+        canvas.addEventListener('touchend', updateTouches, { passive: false });
+        canvas.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            input.leftTouches.clear();
+            input.rightTouches.clear();
+        }, { passive: false });
+
+        // Simultaneous Mouse & Keyboard Support
+        canvas.addEventListener('mousedown', (e) => {
+            audio.init();
+            if (currentState !== GAME_STATE.PLAYING) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const relX = e.clientX - rect.left;
+
+            // If Space/W/Up is already held on keyboard, clicking anywhere fires weapon!
+            // Otherwise left half flies and right half fires (right-click always fires).
+            if (e.button === 2 || relX >= rect.width / 2 || input.leftKeys.size > 0) {
+                input.rightMouseDown = true;
+            } else {
+                if (!input.leftMouseDown) {
+                    input.leftMouseDown = true;
+                    triggerLeftPress();
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            input.leftMouseDown = false;
+            input.rightMouseDown = false;
+        });
+
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        canvas.addEventListener('mousedown', () => {
+            if (currentState === GAME_STATE.GAMEOVER && endingPhase === 4) tryRestart();
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                e.preventDefault();
+            }
+            audio.init();
+
+            if (e.repeat) return;
+            if ((currentState === GAME_STATE.START || currentState === GAME_STATE.GAMEOVER) &&
+                (e.code === 'Space' || e.code === 'Enter')) {
+                if (currentState === GAME_STATE.GAMEOVER) tryRestart();
+                else startGame();
+                return;
+            }
+
+            if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') {
+                if (!input.leftKeys.has(e.code)) {
+                    input.leftKeys.add(e.code);
+                    triggerLeftPress();
+                }
+            } else if (e.code === 'Enter' || e.code === 'KeyZ' || e.code === 'ArrowRight' || e.code === 'KeyJ') {
+                input.rightKeys.add(e.code);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            input.leftKeys.delete(e.code);
+            input.rightKeys.delete(e.code);
+        });
+
+        // ==========================================
+        // 8. SPAWNERS & EFFECTS
+        // ==========================================
+        function spawnParticles(x, y, count, color = '#ffffff', speedScale = 1) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spd = (45 + Math.random() * 145) * speedScale;
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd,
+                    size: Math.random() < 0.6 ? 3 : 5,
+                    color,
+                    life: 0.22 + Math.random() * 0.25
+                });
+            }
+        }
+
+        function spawnThrusterBurst(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 14,
+                    y,
+                    vx: -85 - Math.random() * 110,
+                    vy: 45 + Math.random() * 85,
+                    size: 3,
+                    color: '#38bdf8',
+                    life: 0.18 + Math.random() * 0.12
+                });
+            }
+        }
+
+        function addFloatingText(x, y, text, color = '#ffffff') {
+            floatingTexts.push({ x, y, text, color, life: 1.1 });
+        }
+
+        function getMeteorMaxHp() {
+            // Starts at 4, +4 per 1,000 score (4 -> 8 -> 12 -> 16 -> 20), capped at 20
+            return Math.min(20, 4 + Math.floor(score / 1000) * 4);
+        }
+
+        function spawnObstacle() {
+            const laneRoll = Math.random();
+            const spawnX = logicalWidth + 45;
+            const meteorHp = getMeteorMaxHp();
+
+            if (laneRoll < 0.42) {
+                const w = 24 + Math.floor(Math.random() * 16);
+                const h = 22 + Math.floor(Math.random() * 16);
+                obstacles.push({
+                    type: 'floor_rock',
+                    x: spawnX,
+                    y: FLOOR_Y - h,
+                    width: w,
+                    height: h,
+                    hp: meteorHp,
+                    maxHp: meteorHp
+                });
+            } else if (laneRoll < 0.72) {
+                const w = 24 + Math.floor(Math.random() * 16);
+                const h = 22 + Math.floor(Math.random() * 18);
+                obstacles.push({
+                    type: 'ceiling_rock',
+                    x: spawnX,
+                    y: CEILING_Y,
+                    width: w,
+                    height: h,
+                    hp: meteorHp,
+                    maxHp: meteorHp
+                });
+            } else {
+                const size = 24 + Math.floor(Math.random() * 12);
+                const minY = CEILING_Y + 42;
+                const maxY = FLOOR_Y - 42 - size;
+                obstacles.push({
+                    type: 'mid_rock',
+                    x: spawnX,
+                    y: minY + Math.random() * (maxY - minY),
+                    width: size,
+                    height: size,
+                    hp: meteorHp,
+                    maxHp: meteorHp
+                });
+            }
+        }
+
+        function spawnStageEnemy() {
+            const spawnX = logicalWidth + 45;
+            const minY = CEILING_Y + 18;
+            const maxY = FLOOR_Y - 44;
+            const randY = minY + Math.random() * (maxY - minY);
+
+            // Score progression enemy tiers:
+            // < 3000: Kamikaze Drone (HP 4)
+            // 3000 ~ 5999: Kamikaze Drone (HP 4) + Stationary Straight-Shot Gunship (HP 5)
+            // >= 6000: Stationary Straight-Shot Gunship (HP 5) + Stationary Homing Gunship (HP 7, 1.5x boss shot speed)
+            let kind = 'kamikaze';
+            if (score < 3000) {
+                kind = 'kamikaze';
+            } else if (score < 6000) {
+                kind = Math.random() < 0.5 ? 'kamikaze' : 'gunship1';
+            } else {
+                kind = Math.random() < 0.5 ? 'gunship1' : 'gunship2';
+            }
+
+            if (kind === 'kamikaze') {
+                const targetY = Math.max(minY, Math.min(maxY, player.y + (Math.random() - 0.5) * 60));
+                enemies.push({
+                    kind: 'kamikaze',
+                    x: spawnX,
+                    y: targetY,
+                    width: 32,
+                    height: 20,
+speed: BASE_SCROLL_SPEED * (score >= 3000 ? 1.8 : 1.65),
+                    hp: 4,
+                    maxHp: 4,
+                    wobblePhase: Math.random() * Math.PI * 2
+                });
+            } else if (kind === 'gunship1') {
+                enemies.push({
+                    kind: 'gunship1',
+                    x: spawnX,
+                    stopX: logicalWidth - (95 + Math.random() * 85),
+                    y: randY,
+                    width: 36,
+                    height: 24,
+                    speed: BASE_SCROLL_SPEED * 0.9,
+                    hp: 5,
+                    maxHp: 5,
+                    fireTimer: 1.1,
+                    wobblePhase: Math.random() * Math.PI * 2
+                });
+            } else {
+                enemies.push({
+                    kind: 'gunship2',
+                    x: spawnX,
+                    stopX: logicalWidth - (95 + Math.random() * 85),
+                    y: randY,
+                    width: 36,
+                    height: 24,
+                    speed: BASE_SCROLL_SPEED * 0.9,
+                    hp: 7,
+                    maxHp: 7,
+                    fireTimer: 1.2,
+                    wobblePhase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        // Timed item & heart check (runs every ~11s whether in normal flight or paused-score boss battle)
+        function rollItemAndHeartDrops() {
+            // 1. Weapon Crate Roll: 20% Yellow Missile / 20% Orange HMG / 20% Lime 3-Way
+            const r = Math.random();
+            let chosenWeapon = null;
+            if (r < 0.20) chosenWeapon = 'missile';
+            else if (r < 0.40) chosenWeapon = 'shotgun';
+            else if (r < 0.60) chosenWeapon = 'spread';
+
+            if (chosenWeapon) {
+                const minY = CEILING_Y + 35;
+                const maxY = FLOOR_Y - 60;
+                powerups.push({
+                    type: chosenWeapon,
+                    x: logicalWidth + 30,
+                    y: minY + Math.random() * (maxY - minY),
+                    width: 28,
+                    height: 28,
+                    bobPhase: Math.random() * Math.PI * 2
+                });
+            }
+
+            // 2. Heart Pickup Roll based on missing player hearts:
+            // Missing 2 hearts (1 HP left) -> 40% chance
+            // Missing 1 heart (2 HP left) -> 10% chance
+            const missingHearts = player.maxHearts - player.hearts;
+            let heartChance = 0;
+            if (missingHearts >= 2) heartChance = 0.40;
+            else if (missingHearts === 1) heartChance = 0.10;
+
+            if (heartChance > 0 && Math.random() < heartChance) {
+                const minY = CEILING_Y + 36;
+                const maxY = FLOOR_Y - 54;
+                heartPickups.push({
+                    x: logicalWidth + 55,
+                    y: minY + Math.random() * (maxY - minY),
+                    width: 22,
+                    height: 20,
+                    bobPhase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function createBossEntity(bossType, hp, offsetY = 0, targetOffsetX = 0) {
+            if (bossType === 'meteor1' || bossType === 'meteor2') {
+                return {
+                    bossType,
+                    label: bossType === 'meteor1' ? '운석 보스 I' : '운석 보스 II',
+                    x: logicalWidth + 95,
+                    targetX: logicalWidth - 115 - targetOffsetX,
+                    y: Math.max(CEILING_Y + 12, Math.min(FLOOR_Y - 98, LOGICAL_HEIGHT / 2 - 42 + offsetY)),
+                    width: 82,
+                    height: 76,
+                    hp,
+                    maxHp: hp,
+                    moveDir: offsetY < 0 ? -1 : 1,
+                    moveSpeed: 72,
+                    attackTimer: 1.5,
+                    hitFlashTimer: 0
+                };
+            } else if (bossType === 'fighter') {
+                return {
+                    bossType: 'fighter',
+                    label: '전투기 보스',
+                    x: logicalWidth + 115,
+                    targetX: logicalWidth - 125 - targetOffsetX,
+                    y: Math.max(CEILING_Y + 12, Math.min(FLOOR_Y - 86, LOGICAL_HEIGHT / 2 - 34 + offsetY)),
+                    width: 88,
+                    height: 64,
+                    hp,
+                    maxHp: hp,
+                    moveDir: 1,
+                    moveSpeed: 92,
+                    attackTimer: 1.7,
+                    laserChargeTimer: 0,
+                    laserFireTimer: 0,
+                    hitFlashTimer: 0
+                };
+            } else {
+                // Stage 5 Final Boss: Evil Dino UFO (HP 1000)
+                return {
+                    bossType: 'evildino',
+                    label: '악당 다이노 UFO',
+                    x: logicalWidth + 110,
+                    targetX: logicalWidth - 125,
+                    y: LOGICAL_HEIGHT / 2 - 36,
+                    width: 84,
+                    height: 68,
+                    hp: 1000,
+                    maxHp: 1000,
+                    moveDir: 1,
+                    moveSpeed: 88,
+                    attackTimer: 1.4,
+                    weaponCycleIdx: 0,
+                    burstRemaining: 0,
+                    burstInterval: 0,
+                    // 40% chance to tremble for 2s then ram!
+                    ramState: 'idle', // 'idle' | 'tremble' | 'charge' | 'return'
+                    ramTimer: 0,
+                    ramTargetY: LOGICAL_HEIGHT / 2,
+                    hitFlashTimer: 0
+                };
+            }
+        }
+
+        function spawnStageBoss(stage) {
+            bosses = [];
+            audio.playBossWarning();
+
+            if (stage === 1) {
+                bosses.push(createBossEntity('meteor1', 100));
+                addFloatingText(logicalWidth / 2 - 75, CEILING_Y + 32, 'STAGE 1 BOSS: 거대 운석 (HP 100)', '#ff2a2a');
+            } else if (stage === 2) {
+                bosses.push(createBossEntity('meteor2', 200));
+                addFloatingText(logicalWidth / 2 - 80, CEILING_Y + 32, 'STAGE 2 BOSS: 쌍둥이 운석핵 (HP 200)', '#ff2a2a');
+            } else if (stage === 3) {
+                bosses.push(createBossEntity('fighter', 300));
+                addFloatingText(logicalWidth / 2 - 80, CEILING_Y + 32, 'STAGE 3 BOSS: 침략 전투기 (HP 300)', '#ff2a2a');
+            } else if (stage === 4) {
+                // Stage 4: Simultaneous Meteor Boss (Stage 1 type) + Fighter Jet Boss (Stage 3 type)!
+                bosses.push(createBossEntity('meteor1', 200, -68, 12));
+                bosses.push(createBossEntity('fighter', 250, 68, 0));
+                addFloatingText(logicalWidth / 2 - 90, CEILING_Y + 32, 'STAGE 4 BOSS: 운석 & 전투기 동시 출격!', '#ff2a2a');
+            } else if (stage === 5) {
+                bosses.push(createBossEntity('evildino', 1000));
+                addFloatingText(logicalWidth / 2 - 90, CEILING_Y + 32, 'FINAL BOSS: 악당 다이노 UFO (HP 1000)', '#ff2a2a');
+            }
+        }
+
+        // Fair, guaranteed-navigable Geometry Dash terrain generator for Post-Boss Inverted Mode
+        function spawnGeometryDashSegment() {
+            const playableH = FLOOR_Y - CEILING_Y; // 292px
+            // Guarantee generous traversable corridor gap (>= 116px, which is > 2.5x player height of 46px!)
+            const minGap = 116;
+            const maxGap = 144;
+            const gapH = minGap + Math.random() * (maxGap - minGap);
+
+            // Smoothly shift corridor center so consecutive obstacles are always reachable (zigzag / wave / step)
+            const maxStep = 68;
+            const deltaY = (Math.random() * 2 - 1) * maxStep;
+            const minCenter = CEILING_Y + gapH / 2 + 16;
+            const maxCenter = FLOOR_Y - gapH / 2 - 16;
+            let centerY = lastCorridorCenterY + deltaY;
+            if (centerY < minCenter) centerY = minCenter + Math.random() * 24;
+            if (centerY > maxCenter) centerY = maxCenter - Math.random() * 24;
+            lastCorridorCenterY = centerY;
+
+            const topWallH = Math.max(14, Math.round(centerY - gapH / 2 - CEILING_Y));
+            const botWallY = Math.round(centerY + gapH / 2);
+            const botWallH = Math.max(14, FLOOR_Y - botWallY);
+
+            const patternType = dashPatternStep % 3;
+            dashPatternStep++;
+
+            const spawnX = logicalWidth + 40;
+            const wallW = patternType === 0 ? 34 : 28;
+
+            if (patternType === 0) {
+                // Zigzag narrow corridor pair (ceiling + floor pillars with wide navigable middle)
+                dashWalls.push({ x: spawnX, y: CEILING_Y, width: wallW, height: topWallH });
+                dashWalls.push({ x: spawnX, y: botWallY, width: wallW, height: botWallH });
+            } else if (patternType === 1) {
+                // Alternating ceiling / floor pillars
+                if (dashPatternStep % 2 === 0) {
+                    dashWalls.push({ x: spawnX, y: CEILING_Y, width: wallW, height: Math.min(playableH - minGap, topWallH + 22) });
+                } else {
+                    const h = Math.min(playableH - minGap, botWallH + 22);
+                    dashWalls.push({ x: spawnX, y: FLOOR_Y - h, width: wallW, height: h });
+                }
+            } else {
+                // Floating central monolith island with guaranteed top OR bottom passage (>= 116px)
+                const blockH = 54;
+                const placeHigh = centerY > (CEILING_Y + playableH / 2);
+                const blockY = placeHigh ? (CEILING_Y + 26) : (FLOOR_Y - 26 - blockH);
+                dashWalls.push({ x: spawnX, y: blockY, width: 32, height: blockH });
+            }
+        }
+
+        // ==========================================
+        // 9. GAME LOOP & COLLISION LOGIC
+        // ==========================================
+        function startGame() {
+            audio.init();
+            score = 0;
+            nextBossScore = 1000;
+            bossStage = 0;
+            isInvertedMode = false;
+            itemSpawnTimer = 5.5; // First item check occurs midway through first 1000-score stretch
+            hmgStaggerToggle = 0;
+
+            updatePlayerAnchorX();
+            player.y = LOGICAL_HEIGHT / 2 - 22;
+            player.vy = 0;
+            player.hearts = player.maxHearts;
+            player.invincibleTimer = 0;
+            player.weapon = 'default';
+            player.ammo = Infinity;
+            player.fireCooldown = 0;
+            player.tiltAngle = 0;
+
+            projectiles = [];
+            enemyProjectiles = [];
+            enemyBeams = [];
+            obstacles = [];
+            enemies = [];
+            powerups = [];
+            heartPickups = [];
+            bosses = [];
+            dashWalls = [];
+            dashHazards = [];
+            pendingMine = null;
+            particles = [];
+            floatingTexts = [];
+            obstacleSpawnTimer = 0.9;
+            enemySpawnTimer = 2.2;
+            lastCorridorCenterY = LOGICAL_HEIGHT / 2;
+            dashPatternStep = 0;
+            input.touchHintAlpha = 1.0;
+            endingPhase = 0;
+            endingTimer = 0;
+            document.getElementById('endingOverlay').style.opacity = '0';
+            document.getElementById('endingText').style.opacity = '0';
+
+            currentState = GAME_STATE.PLAYING;
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+        }
+
+        function triggerGameOver() {
+            currentState = GAME_STATE.GAMEOVER;
+            gameOverAt = performance.now();
+            audio.playGameOver();
+
+            const finalIntScore = Math.floor(score);
+if (finalIntScore > highScore) {
+    highScore = finalIntScore;
+}
+try {
+    localStorage.setItem('dino_ufo_hi_score', highScore.toString());
+} catch (e) {}
+            document.getElementById('finalScore').textContent = String(finalIntScore).padStart(5, '0');
+            document.getElementById('finalHighScore').textContent = String(highScore).padStart(5, '0');
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+        }
+
+const GOD_MODE = false;
+function damagePlayer() {
+    if (GOD_MODE) return;
+    if (currentState !== GAME_STATE.PLAYING) return;
+    if (player.invincibleTimer > 0) return;
+
+            player.hearts -= 1;
+            screenShakeTimer = 0.22;
+            spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 18, '#ff2a2a', 1.2);
+
+            if (player.hearts <= 0) {
+                player.hearts = 0;
+                triggerGameOver();
+            } else {
+                player.invincibleTimer = 3.0;
+                audio.playExplosion(true);
+            }
+        }
+
+        function rectsOverlap(a, b, pad = 3) {
+            return (
+                a.x + pad < b.x + b.width - pad &&
+                a.x + a.width - pad > b.x + pad &&
+                a.y + pad < b.y + b.height - pad &&
+                a.y + a.height - pad > b.y + pad
+            );
+        }
+
+        function fireEvilDinoWeapon(b, weaponKind) {
+            const muzzleX = b.x + 6;
+            const muzzleY = b.y + b.height / 2;
+
+            if (weaponKind === 'laser') {
+                enemyProjectiles.push({
+                    kind: 'evil_laser',
+                    x: muzzleX - 14,
+                    y: muzzleY - 2,
+                    vx: -480,
+                    vy: 0,
+                    width: 18,
+                    height: 4,
+                    sparklePhase: 0
+                });
+            } else if (weaponKind === 'hmg') {
+                const offsets = [-6, 4, -2, 6];
+                const off = offsets[Math.floor(Math.random() * offsets.length)];
+                enemyProjectiles.push({
+                    kind: 'evil_hmg',
+                    x: muzzleX - 12,
+                    y: muzzleY + off,
+                    vx: -510,
+                    vy: 0,
+                    width: 15,
+                    height: 4,
+                    sparklePhase: 0
+                });
+            } else if (weaponKind === 'missile') {
+                const dx = (player.x + player.width / 2) - muzzleX;
+                const dy = (player.y + player.height / 2) - muzzleY;
+                const dist = Math.hypot(dx, dy) || 1;
+                enemyProjectiles.push({
+                    kind: 'evil_missile',
+                    x: muzzleX - 16,
+                    y: muzzleY - 3,
+                    vx: (dx / dist) * 340,
+                    vy: (dy / dist) * 340,
+                    width: 18,
+                    height: 7,
+                    sparklePhase: 0
+                });
+            } else if (weaponKind === 'spread') {
+                [-140, 0, 140].forEach(vy => {
+                    enemyProjectiles.push({
+                        kind: 'evil_spread',
+                        x: muzzleX - 12,
+                        y: muzzleY - 2,
+                        vx: -430,
+                        vy,
+                        width: 14,
+                        height: 4,
+                        sparklePhase: 0
+                    });
+                });
+            }
+        }
+
+        function update(dt) {
+            frameCounter++;
+            updatePlayerAnchorX();
+
+            // Speed calculation:
+            // Normal mode: BASE_SCROLL_SPEED
+            // Inverted Geometry Dash mode: scales smoothly from 3.0x base ratio up to 5.0x max ratio!
+            let scrollSpeed = BASE_SCROLL_SPEED;
+            if (currentState === GAME_STATE.GAMEOVER) {
+                scrollSpeed = 0;
+} else if (isInvertedMode) {
+    const t = Math.min(1, Math.max(0, (score - 5000) / 4000)); // 5000~9000
+    const speedRatio = 1 + 2 * t;                              // 1.0 → 3.0
+    scrollSpeed = BASE_SCROLL_SPEED * speedRatio;
+}
+
+            // Scroll space stars & planets
+            stars.forEach(s => {
+                s.x -= scrollSpeed * s.speedFactor * dt;
+                if (s.x < -5) s.x = logicalWidth + 10;
+            });
+
+            planets.forEach(p => {
+                p.x -= scrollSpeed * p.speedFactor * dt;
+                if (p.x < -45) p.x = logicalWidth + 55;
+            });
+
+            terrainTicks.forEach(t => {
+                t.x -= scrollSpeed * dt;
+                if (t.x < -20) t.x += 1600;
+            });
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.life -= dt;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y -= 24 * dt;
+                ft.life -= dt;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+
+            if (screenShakeTimer > 0) screenShakeTimer -= dt;
+
+            if (currentState !== GAME_STATE.PLAYING) {
+                if (currentState === GAME_STATE.START) {
+                    player.y = (LOGICAL_HEIGHT / 2 - 22) + Math.sin(frameCounter * 0.08) * 6;
+                }
+                return;
+            }
+
+            if (input.touchHintAlpha > 0) {
+                input.touchHintAlpha = Math.max(0, input.touchHintAlpha - dt * 0.25);
+            }
+
+            const hasActiveBoss = bosses.length > 0;
+
+            // PAUSE score while a Boss is alive so bosses never overlap!
+if (!hasActiveBoss && endingPhase === 0) {
+    const scoreMul = isInvertedMode ? Math.pow(scrollSpeed / BASE_SCROLL_SPEED, 0.7) : 1;
+    score += dt * 22 * 0.9 * scoreMul;
+    const intScore = Math.floor(score);
+    if (intScore > highScore) highScore = intScore;
+}
+
+            // Item & Heart Drop Timer runs continuously (including during Boss fights!)
+            // ~11.3s corresponds to ~250 score ticks, checking twice per 1000-score interval
+            if (!isInvertedMode) {
+                itemSpawnTimer -= dt;
+                if (itemSpawnTimer <= 0) {
+                    rollItemAndHeartDrops();
+                    itemSpawnTimer = 11.3;
+                }
+            } else {
+                // In Inverted Geometry Dash mode, still allow heart pickups if damaged!
+                itemSpawnTimer -= dt;
+                if (itemSpawnTimer <= 0) {
+                    const missingHearts = player.maxHearts - player.hearts;
+                    const chance = missingHearts >= 2 ? 0.40 : (missingHearts === 1 ? 0.10 : 0);
+                    if (chance > 0 && Math.random() < chance) {
+                        heartPickups.push({
+                            x: logicalWidth + 40,
+                            y: lastCorridorCenterY - 10,
+                            width: 22,
+                            height: 20,
+                            bobPhase: 0
+                        });
+                    }
+                    itemSpawnTimer = 10.0;
+                }
+            }
+
+            // Trigger Bosses at 1000, 2000, 3000, 4000, 5000 (Stages 1..5)
+            if (!isInvertedMode && !hasActiveBoss && bossStage < 5 && score >= nextBossScore) {
+                bossStage += 1;
+                spawnStageBoss(bossStage);
+                nextBossScore += 1000;
+            }
+
+            // Player Timers
+            if (player.invincibleTimer > 0) player.invincibleTimer = Math.max(0, player.invincibleTimer - dt);
+            if (player.fireCooldown > 0) player.fireCooldown = Math.max(0, player.fireCooldown - dt);
+            if (player.muzzleFlashTimer > 0) player.muzzleFlashTimer = Math.max(0, player.muzzleFlashTimer - dt);
+
+            // Simultaneous Continuous Weapon Firing
+            if (isRightActive()) {
+                fireCurrentWeapon();
+            }
+
+            // Simultaneous Flight Physics
+            if (isLeftActive()) {
+                player.vy += (player.gravity + player.thrustAccel) * dt;
+                if (frameCounter % 3 === 0) {
+                    particles.push({
+                        x: player.x + 8,
+                        y: player.y + 30,
+                        vx: -140 - Math.random() * 60,
+                        vy: 30 + Math.random() * 40,
+                        size: 3,
+                        color: '#38bdf8',
+                        life: 0.16
+                    });
+                }
+            } else {
+                player.vy += player.gravity * dt;
+                if (frameCounter % 4 === 0) {
+                    particles.push({
+                        x: player.x + 4,
+                        y: player.y + 26 + (Math.random() - 0.5) * 6,
+                        vx: -130 - Math.random() * 50,
+                        vy: (Math.random() - 0.5) * 20,
+                        size: 3,
+                        color: '#94a3b8',
+                        life: 0.15
+                    });
+                }
+            }
+
+            player.vy = Math.max(player.maxRiseSpeed, Math.min(player.maxFallSpeed, player.vy));
+            player.y += player.vy * dt;
+
+            // Safe Floor & Ceiling Boundaries
+            if (player.y < CEILING_Y) {
+                player.y = CEILING_Y;
+                if (player.vy < 0) player.vy = 0;
+            }
+            if (player.y + player.height > FLOOR_Y) {
+                player.y = FLOOR_Y - player.height;
+                if (player.vy > 0) player.vy = 0;
+            }
+
+            const targetTilt = (player.vy / 350) * 0.16;
+            player.tiltAngle += (targetTilt - player.tiltAngle) * 12 * dt;
+
+            // Update Player Projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+
+                if (p.kind === 'missile' && frameCounter % 2 === 0) {
+                    particles.push({
+                        x: p.x - 2,
+                        y: p.y + 2,
+                        vx: -90,
+                        vy: (Math.random() - 0.5) * 25,
+                        size: 3,
+                        color: '#fef08a',
+                        life: 0.14
+                    });
+                }
+
+                // Projectiles are blocked by indestructible Geometry Dash walls in Inverted Mode
+                let hitDashWall = false;
+                for (let wIdx = 0; wIdx < dashWalls.length; wIdx++) {
+                    if (rectsOverlap(p, dashWalls[wIdx], 0)) {
+                        hitDashWall = true;
+                        spawnParticles(p.x + p.width, p.y, 4, '#38bdf8', 0.6);
+                        break;
+                    }
+                }
+
+                if (hitDashWall || p.x > logicalWidth + 40 || p.y < CEILING_Y - 10 || p.y > FLOOR_Y + 10) {
+                    projectiles.splice(i, 1);
+                }
+            }
+
+            // Update Floating Weapon Power-Up Crates
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const crate = powerups[i];
+                crate.x -= (BASE_SCROLL_SPEED * 0.72) * dt;
+                crate.bobPhase += dt * 4;
+                const drawY = crate.y + Math.sin(crate.bobPhase) * 6;
+
+                const crateBox = { x: crate.x, y: drawY, width: crate.width, height: crate.height };
+                if (rectsOverlap(player, crateBox, 2)) {
+                    const spec = WEAPONS[crate.type];
+                    if (player.weapon === crate.type) {
+                        player.ammo += spec.ammoPerPickup;
+                    } else {
+                        player.weapon = crate.type;
+                        player.ammo = spec.ammoPerPickup;
+                    }
+                    audio.playPowerup();
+                    spawnParticles(crate.x + 14, drawY + 14, 16, spec.color, 1.1);
+                    addFloatingText(player.x + 10, player.y - 12, `${spec.name} +${spec.ammoPerPickup}`, spec.color);
+                    powerups.splice(i, 1);
+                    continue;
+                }
+
+                if (crate.x + crate.width < -30) {
+                    powerups.splice(i, 1);
+                }
+            }
+
+            // Update Floating Heart Pickups
+            for (let i = heartPickups.length - 1; i >= 0; i--) {
+                const hpItem = heartPickups[i];
+                hpItem.x -= (BASE_SCROLL_SPEED * 0.72) * dt;
+                hpItem.bobPhase += dt * 4.5;
+                const drawY = hpItem.y + Math.sin(hpItem.bobPhase) * 6;
+
+                if (rectsOverlap(player, { x: hpItem.x, y: drawY, width: hpItem.width, height: hpItem.height }, 2)) {
+                    if (player.hearts < player.maxHearts) {
+                        player.hearts += 1;
+                    }
+                    audio.playHeal();
+                    spawnParticles(hpItem.x + 11, drawY + 10, 14, '#ff2a4b', 1.0);
+                    addFloatingText(player.x + 10, player.y - 12, '체력 +1 회복!', '#ff2a4b');
+                    heartPickups.splice(i, 1);
+                    continue;
+                }
+
+                if (hpItem.x + hpItem.width < -30) {
+                    heartPickups.splice(i, 1);
+                }
+            }
+
+            // ============================================================
+            // POST-BOSS INVERTED MODE: GEOMETRY DASH INDESTRUCTIBLE COURSE
+            // ============================================================
+if (isInvertedMode) {
+    if (endingPhase === 0 && score >= 10000) {
+        score = 10000;
+        startEnding();
+    }
+
+    if (endingPhase === 0) {
+        obstacleSpawnTimer -= dt;
+        if (obstacleSpawnTimer <= 0) {
+            spawnGeometryDashSegment();
+            spawnMine();
+            obstacleSpawnTimer = Math.max(0.62, 230 / scrollSpeed);
+        }
+    } else {
+        updateEnding(dt);
+    }
+
+    for (let i = dashWalls.length - 1; i >= 0; i--) {
+        const wall = dashWalls[i];
+        wall.x -= scrollSpeed * dt;
+
+        if (endingPhase === 0 && rectsOverlap(player, wall, 5)) {
+            damagePlayer();
+        }
+
+        if (wall.x + wall.width < -40) {
+            dashWalls.splice(i, 1);
+        }
+    }
+
+    // 지뢰 업데이트
+    // 지뢰 업데이트
+    for (let i = dashHazards.length - 1; i >= 0; i--) {
+        const m = dashHazards[i];
+        m.x -= scrollSpeed * dt;
+        m.pulse += dt * 6;
+
+        // 내 총알에 맞았는지
+        let destroyed = false;
+        for (let j = projectiles.length - 1; j >= 0; j--) {
+            if (rectsOverlap(projectiles[j], m, 0)) {
+                m.hp -= projectiles[j].damage;
+                projectiles.splice(j, 1);
+                spawnParticles(m.x, m.y + m.height / 2, 5, '#ff2a2a', 0.7);
+                if (m.hp <= 0) destroyed = true;
+                break;
+            }
+        }
+        if (destroyed) {
+            audio.playExplosion(false);
+            spawnParticles(m.x + m.width / 2, m.y + m.height / 2, 12, '#ff2a2a', 1.0);
+            dashHazards.splice(i, 1);
+            continue;
+        }
+
+        // 플레이어와 충돌
+        if (endingPhase === 0 && rectsOverlap(player, m, 4)) {
+            damagePlayer();
+            audio.playExplosion(false);
+            spawnParticles(m.x + m.width / 2, m.y + m.height / 2, 14, '#ff2a2a', 1.2);
+            dashHazards.splice(i, 1);
+            continue;
+        }
+
+        if (m.x + m.width < -40) dashHazards.splice(i, 1);
+    }
+    return;
+}
+if (!hasActiveBoss) {
+                obstacleSpawnTimer -= dt;
+                if (obstacleSpawnTimer <= 0) {
+                    spawnObstacle();
+                    obstacleSpawnTimer = 0.92 + Math.random() * 0.8;
+                }
+
+                enemySpawnTimer -= dt;
+                if (enemySpawnTimer <= 0) {
+                    spawnStageEnemy();
+                    enemySpawnTimer = 2.0 + Math.random() * 1.4;
+                }
+            }
+
+            // Update Obstacles (Meteors)
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= scrollSpeed * dt;
+
+                let destroyed = false;
+                for (let j = projectiles.length - 1; j >= 0; j--) {
+                    if (rectsOverlap(projectiles[j], obs, 0)) {
+                        const dmg = projectiles[j].damage;
+                        projectiles.splice(j, 1);
+                        obs.hp -= dmg;
+                        spawnParticles(obs.x, obs.y + obs.height / 2, 5, '#ff2a2a', 0.7);
+                        if (obs.hp <= 0) {
+                            destroyed = true;
+                            if (!hasActiveBoss) score += 20;
+                            audio.playExplosion(false);
+                            spawnParticles(obs.x + obs.width / 2, obs.y + obs.height / 2, 12, '#ff2a2a', 1.0);
+                        }
+                        break;
+                    }
+                }
+
+                if (destroyed) {
+                    obstacles.splice(i, 1);
+                    continue;
+                }
+
+                if (rectsOverlap(player, obs, 5)) {
+                    damagePlayer();
+                    spawnParticles(obs.x + obs.width / 2, obs.y + obs.height / 2, 10, '#ff2a2a', 1.0);
+                    obstacles.splice(i, 1);
+                    continue;
+                }
+
+                if (obs.x + obs.width < -35) obstacles.splice(i, 1);
+            }
+
+            // Update Stage Enemies (Kamikaze Drone, Gunship 1, Homing Gunship 2)
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const en = enemies[i];
+                en.wobblePhase += dt * 7;
+
+                if (en.kind === 'kamikaze') {
+                    en.x -= en.speed * dt;
+                    en.y += Math.sin(en.wobblePhase) * 30 * dt;
+                } else {
+                    // Gunship 1 & Gunship 2 enter and hold stationary X position on right side!
+                    if (en.x > en.stopX) {
+                        en.x = Math.max(en.stopX, en.x - en.speed * dt);
+                    }
+                    en.fireTimer -= dt;
+                    if (en.fireTimer <= 0 && en.x <= en.stopX + 5) {
+                        const gunX = en.x - 4;
+                        const gunY = en.y + en.height / 2 - 3;
+
+                        if (en.kind === 'gunship1') {
+                            // Straight horizontal projectile
+                            enemyProjectiles.push({
+                                kind: 'sparkle',
+                                x: gunX,
+                                y: gunY,
+                                vx: -310,
+                                vy: 0,
+                                width: 8,
+                                height: 8,
+                                sparklePhase: 0
+                            });
+                            en.fireTimer = 1.75;
+                        } else {
+                            // Gunship 2: Homing missile at 1.5x standard boss projectile speed (245 * 1.5 = 368)
+                            const dx = (player.x + player.width / 2) - gunX;
+                            const dy = (player.y + player.height / 2) - gunY;
+                            const dist = Math.hypot(dx, dy) || 1;
+                            const homingSpeed = 245 * 1.5;
+                            enemyProjectiles.push({
+                                kind: 'homing_fast',
+                                x: gunX,
+                                y: gunY,
+                                vx: (dx / dist) * homingSpeed,
+                                vy: (dy / dist) * homingSpeed,
+                                width: 10,
+                                height: 7,
+                                sparklePhase: 0
+                            });
+                            en.fireTimer = 2.0;
+                        }
+                    }
+                }
+
+                let destroyed = false;
+                for (let j = projectiles.length - 1; j >= 0; j--) {
+                    if (rectsOverlap(projectiles[j], en, 0)) {
+                        const dmg = projectiles[j].damage;
+                        projectiles.splice(j, 1);
+                        en.hp -= dmg;
+                        spawnParticles(en.x, en.y + en.height / 2, 5, '#ff2a2a', 0.8);
+                        if (en.hp <= 0) {
+                            destroyed = true;
+                            if (!hasActiveBoss) score += 35;
+                            audio.playExplosion(false);
+                            spawnParticles(en.x + en.width / 2, en.y + en.height / 2, 14, '#ff2a2a', 1.1);
+                        }
+                        break;
+                    }
+                }
+
+                if (destroyed) {
+                    enemies.splice(i, 1);
+                    continue;
+                }
+
+                if (rectsOverlap(player, en, 4)) {
+                    damagePlayer();
+                    spawnParticles(en.x + en.width / 2, en.y + en.height / 2, 14, '#ff2a2a', 1.2);
+                    enemies.splice(i, 1);
+                    continue;
+                }
+
+                if (en.x + en.width < -40) enemies.splice(i, 1);
+            }
+
+            // Update Active Bosses (Stages 1..5)
+            for (let bIdx = bosses.length - 1; bIdx >= 0; bIdx--) {
+                const b = bosses[bIdx];
+                if (b.hitFlashTimer > 0) b.hitFlashTimer = Math.max(0, b.hitFlashTimer - dt);
+
+                // Smooth entry into arena
+                if (b.x > b.targetX && (!b.ramState || b.ramState === 'idle')) {
+                    b.x = Math.max(b.targetX, b.x - 125 * dt);
+                } else {
+                    // Vertical patrol movement (unless trembling or charging in Stage 5)
+                    const canPatrol = !b.ramState || b.ramState === 'idle';
+                    if (canPatrol && (!b.laserFireTimer || b.laserFireTimer <= 0)) {
+                        b.y += b.moveDir * b.moveSpeed * dt;
+                        if (b.y <= CEILING_Y + 8) {
+                            b.y = CEILING_Y + 8;
+                            b.moveDir = 1;
+                        } else if (b.y + b.height >= FLOOR_Y - 14) {
+                            b.y = FLOOR_Y - 14 - b.height;
+                            b.moveDir = -1;
+                        }
+                    }
+                }
+
+                // Boss Attack Logic by Type
+                if (b.x <= b.targetX + 8) {
+                    const cannonX = b.x + 6;
+                    const cannonY = b.y + b.height / 2;
+
+                    if (b.bossType === 'meteor1' || b.bossType === 'meteor2') {
+                        b.attackTimer -= dt;
+                        if (b.attackTimer <= 0) {
+                            const dx = (player.x + player.width / 2) - cannonX;
+                            const dy = (player.y + player.height / 2) - cannonY;
+                            const baseAngle = Math.atan2(dy, dx);
+                            const shotSpeed = 245;
+
+                            if (b.bossType === 'meteor1') {
+                                // Stage 1 Meteor Boss: 1 homing shot
+                                enemyProjectiles.push({
+                                    kind: 'sparkle',
+                                    x: cannonX,
+                                    y: cannonY - 4,
+                                    vx: Math.cos(baseAngle) * shotSpeed,
+                                    vy: Math.sin(baseAngle) * shotSpeed,
+                                    width: 9,
+                                    height: 9,
+                                    sparklePhase: 0
+                                });
+                            } else {
+                                // Stage 2 Meteor Boss: 3 homing fan shots
+                                [-0.24, 0, 0.24].forEach(offsetAngle => {
+                                    const ang = baseAngle + offsetAngle;
+                                    enemyProjectiles.push({
+                                        kind: 'sparkle',
+                                        x: cannonX,
+                                        y: cannonY - 4,
+                                        vx: Math.cos(ang) * shotSpeed,
+                                        vy: Math.sin(ang) * shotSpeed,
+                                        width: 9,
+                                        height: 9,
+                                        sparklePhase: Math.random() * 5
+                                    });
+                                });
+                            }
+                            b.attackTimer = 1.75;
+                        }
+                    } else if (b.bossType === 'fighter') {
+                        // Stage 3 Fighter Jet Boss:
+                        // 2 straight missiles + 2 homing missiles, plus 40% chance for 3-second wide straight laser beam!
+                        if (b.laserChargeTimer > 0) {
+                            b.laserChargeTimer -= dt;
+                            if (b.laserChargeTimer <= 0) {
+                                b.laserFireTimer = 3.0; // Fire wide laser beam for 3 seconds!
+                                audio.playBossWarning();
+                            }
+                        } else if (b.laserFireTimer > 0) {
+                            b.laserFireTimer -= dt;
+                            const beamBox = {
+                                x: 0,
+                                y: b.y + b.height / 2 - 14,
+                                width: b.x,
+                                height: 28
+                            };
+                            if (rectsOverlap(player, beamBox, 3)) {
+                                damagePlayer();
+                            }
+                        } else {
+                            b.attackTimer -= dt;
+                            if (b.attackTimer <= 0) {
+                                // 2 straight missiles
+                                [-14, 14].forEach(offY => {
+                                    enemyProjectiles.push({
+                                        kind: 'boss_missile',
+                                        x: cannonX,
+                                        y: cannonY + offY,
+                                        vx: -330,
+                                        vy: 0,
+                                        width: 16,
+                                        height: 6,
+                                        sparklePhase: 0
+                                    });
+                                });
+                                // 2 homing missiles
+                                [-22, 22].forEach(offY => {
+                                    const dx = (player.x + player.width / 2) - cannonX;
+                                    const dy = (player.y + player.height / 2) - (cannonY + offY);
+                                    const dist = Math.hypot(dx, dy) || 1;
+                                    enemyProjectiles.push({
+                                        kind: 'sparkle',
+                                        x: cannonX,
+                                        y: cannonY + offY,
+                                        vx: (dx / dist) * 265,
+                                        vy: (dy / dist) * 265,
+                                        width: 9,
+                                        height: 9,
+                                        sparklePhase: 0
+                                    });
+                                });
+
+                                // 40% chance to initiate 3-second wide laser beam attack
+                                if (Math.random() < 0.40) {
+                                    b.laserChargeTimer = 0.85; // Brief telegraph warning before 3s beam
+                                    b.attackTimer = 4.6;
+                                } else {
+                                    b.attackTimer = 2.1;
+                                }
+                            }
+                        }
+                    } else if (b.bossType === 'evildino') {
+                        // Stage 5 Final Boss: Evil Dino UFO
+                        if (b.ramState === 'tremble') {
+                            b.ramTimer -= dt;
+                            if (b.ramTimer <= 0) {
+                                b.ramState = 'charge';
+                                b.ramTargetY = Math.max(CEILING_Y + 6, Math.min(FLOOR_Y - b.height - 6, player.y));
+                                audio.playBossWarning();
+                            }
+                        } else if (b.ramState === 'charge') {
+                            // High-speed ramming dash toward player's lane!
+                            b.x -= 640 * dt;
+                            b.y += (b.ramTargetY - b.y) * 6 * dt;
+                            if (b.x <= player.x + 12) {
+                                b.ramState = 'return';
+                            }
+                        } else if (b.ramState === 'return') {
+                            b.x += 360 * dt;
+                            if (b.x >= b.targetX) {
+                                b.x = b.targetX;
+                                b.ramState = 'idle';
+                                b.attackTimer = 1.2;
+                            }
+                        } else {
+                            // Handle ongoing burst shots (e.g. Heavy Machine Gun stream)
+                            if (b.burstRemaining > 0) {
+                                b.burstInterval -= dt;
+                                if (b.burstInterval <= 0) {
+                                    fireEvilDinoWeapon(b, b.activeWeaponKind);
+                                    b.burstRemaining -= 1;
+                                    b.burstInterval = 0.11;
+                                }
+                            } else {
+                                b.attackTimer -= dt;
+                                if (b.attackTimer <= 0) {
+                                    // 40% chance to tremble for 2 seconds and execute ramming charge!
+                                    if (Math.random() < 0.40) {
+                                        b.ramState = 'tremble';
+                                        b.ramTimer = 2.0;
+                                        addFloatingText(b.x - 10, b.y - 12, '위험! 돌진 준비!', '#ff2a2a');
+                                    } else {
+                                        // Cycle through all 4 player weapons with reddish tint:
+                                        // 0: Base Laser, 1: Heavy Machine Gun, 2: Missile, 3: 3-Way Spread
+                                        const cycle = ['laser', 'hmg', 'missile', 'spread'];
+                                        const chosen = cycle[b.weaponCycleIdx % cycle.length];
+                                        b.weaponCycleIdx++;
+                                        b.activeWeaponKind = chosen;
+
+                                        if (chosen === 'hmg') {
+                                            b.burstRemaining = 7;
+                                            b.burstInterval = 0.05;
+                                            b.attackTimer = 1.65;
+                                        } else {
+                                            fireEvilDinoWeapon(b, chosen);
+                                            b.attackTimer = 1.35;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let bossDead = false;
+                // Player Projectiles vs Boss
+                for (let j = projectiles.length - 1; j >= 0; j--) {
+                    if (rectsOverlap(projectiles[j], b, 2)) {
+                        const dmg = projectiles[j].damage;
+                        projectiles.splice(j, 1);
+                        b.hp -= dmg;
+                        b.hitFlashTimer = 0.06;
+                        spawnParticles(b.x + 14, b.y + b.height / 2, 6, '#fbbf24', 0.9);
+
+                        if (b.hp <= 0) {
+                            const defeatedType = b.bossType;
+                            audio.playExplosion(true);
+                            screenShakeTimer = 0.38;
+                            spawnParticles(b.x + b.width / 2, b.y + b.height / 2, 38, '#ff2a2a', 1.6);
+                            spawnParticles(b.x + b.width / 2, b.y + b.height / 2, 26, '#fbbf24', 1.3);
+                            bosses.splice(bIdx, 1);
+                            bossDead = true;
+
+if (bosses.length === 0) {
+    if (defeatedType === 'evildino' || bossStage >= 5) {
+                                    // FINAL BOSS DEFEATED -> SCREEN INVERSION + GEOMETRY DASH ENDLESS MODE!
+                                    isInvertedMode = true;
+                                    obstacles = [];
+                                    enemies = [];
+                                    enemyProjectiles = [];
+                                    enemyBeams = [];
+                                    powerups = [];
+                                    obstacleSpawnTimer = 0.6;
+                                    addFloatingText(logicalWidth / 2 - 110, LOGICAL_HEIGHT / 2 - 20, 'FINAL ROUND!', '#ffffff');
+                                } else {
+                                    addFloatingText(logicalWidth / 2 - 70, CEILING_Y + 36, `STAGE ${bossStage} CLEAR!`, '#fbbf24');
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // Player collision with Boss body (including Evil Dino ramming dash!)
+                if (!bossDead && bosses[bIdx] && rectsOverlap(player, bosses[bIdx], 6)) {
+                    damagePlayer();
+                }
+            }
+
+            // Update Enemy Projectiles
+            for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+                const ep = enemyProjectiles[i];
+                ep.x += ep.vx * dt;
+                ep.y += ep.vy * dt;
+                ep.sparklePhase += dt * 24;
+
+                if (rectsOverlap(player, ep, 2)) {
+                    damagePlayer();
+                    spawnParticles(ep.x, ep.y, 10, '#ff2a2a', 1.0);
+                    enemyProjectiles.splice(i, 1);
+                    continue;
+                }
+
+                if (ep.x < -30 || ep.x > logicalWidth + 30 || ep.y < CEILING_Y - 15 || ep.y > FLOOR_Y + 15) {
+                    enemyProjectiles.splice(i, 1);
+                }
+            }
+        }
+
+        // ==========================================
+        // 10. PIXEL ART RENDERING ENGINE
+        // ==========================================
+        function drawRedHPBar(x, y, width, hp, maxHp) {
+            const barH = 4;
+            const ratio = Math.max(0, Math.min(1, hp / maxHp));
+            ctx.fillStyle = '#2a0808';
+            ctx.fillRect(Math.round(x), Math.round(y), Math.round(width), barH);
+            ctx.fillStyle = '#ff2a2a';
+            ctx.fillRect(Math.round(x), Math.round(y), Math.round(width * ratio), barH);
+            ctx.strokeStyle = '#7f1d1d';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(Math.round(x), Math.round(y), Math.round(width), barH);
+        }
+
+        function drawPlayerUFODino() {
+            if (player.invincibleTimer > 0 && Math.floor(player.invincibleTimer * 16) % 2 === 0) {
+                return;
+            }
+
+            ctx.save();
+            const centerX = Math.round(player.x + player.width / 2);
+            const centerY = Math.round(player.y + player.height / 2);
+            ctx.translate(centerX, centerY);
+            ctx.rotate(player.tiltAngle);
+
+            const ox = -Math.round(player.width / 2);
+            const oy = -Math.round(player.height / 2);
+
+            // 1. Top Antenna + Glowing Emitter Beacon
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(ox + 28, oy + 1, 2, 5);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(ox + 26, oy + 0, 6, 3);
+
+            // 2. Glass Dome Fill & Crisp Pixel Rim
+            ctx.fillStyle = 'rgba(186, 230, 253, 0.22)';
+            ctx.fillRect(ox + 15, oy + 7, 28, 17);
+            ctx.fillRect(ox + 12, oy + 11, 34, 13);
+
+            ctx.fillStyle = '#bae6fd';
+            ctx.fillRect(ox + 21, oy + 5, 16, 2);
+            ctx.fillRect(ox + 16, oy + 7, 5, 2);
+            ctx.fillRect(ox + 37, oy + 7, 5, 2);
+            ctx.fillRect(ox + 13, oy + 9, 3, 3);
+            ctx.fillRect(ox + 42, oy + 9, 3, 3);
+            ctx.fillRect(ox + 11, oy + 12, 2, 12);
+            ctx.fillRect(ox + 45, oy + 12, 2, 12);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(ox + 15, oy + 11, 2, 5);
+
+            // 3. Exact Chrome Dino Silhouette inside the Glass Dome
+            drawMatrix(DINO_SPRITE, ox + 21, oy + 9, 1, '#9ca3af');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(ox + 29, oy + 11, 1, 1);
+
+            // 4. Flying Saucer Hull
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(ox + 6, oy + 24, 46, 3);
+            ctx.fillStyle = '#64748b';
+            ctx.fillRect(ox + 1, oy + 27, 56, 4);
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(ox + 7, oy + 31, 44, 4);
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(ox + 14, oy + 35, 30, 3);
+
+            const lightPhase = Math.floor(frameCounter / 10) % 3;
+            [12, 24, 36, 46].forEach((px, idx) => {
+                ctx.fillStyle = idx % 3 === lightPhase ? '#38bdf8' : '#e2e8f0';
+                ctx.fillRect(ox + px, oy + 28, 3, 2);
+            });
+
+            // 5. Bottom Landing Struts
+            ctx.fillStyle = '#64748b';
+            ctx.fillRect(ox + 16, oy + 38, 5, 5);
+            ctx.fillRect(ox + 14, oy + 42, 8, 2);
+            ctx.fillRect(ox + 37, oy + 38, 5, 5);
+            ctx.fillRect(ox + 36, oy + 42, 8, 2);
+
+            // 6. Side-Mounted Weapon Pod
+            if (player.weapon !== 'default') {
+                const wSpec = WEAPONS[player.weapon];
+                ctx.fillStyle = wSpec.color;
+                ctx.fillRect(ox + 34, oy + 27, 16, 7);
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(ox + 34, oy + 27, 16, 7);
+
+                ctx.fillStyle = '#ffffff';
+                if (player.weapon === 'spread') {
+                    ctx.fillRect(ox + 50, oy + 27, 4, 2);
+                    ctx.fillRect(ox + 50, oy + 31, 4, 2);
+                } else {
+                    ctx.fillRect(ox + 50, oy + 29, 5, 3);
+                }
+            }
+
+            if (player.muzzleFlashTimer > 0) {
+                if (player.weapon === 'default') {
+                    ctx.fillStyle = '#7dd3fc';
+                    ctx.fillRect(ox + 32, oy - 1, 6, 5);
+                } else {
+                    const wSpec = WEAPONS[player.weapon];
+                    ctx.fillStyle = wSpec.color;
+                    ctx.fillRect(ox + 54, oy + 27, 6, 6);
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function drawEnemyMeteor(obs) {
+            const x = Math.round(obs.x);
+            const y = Math.round(obs.y);
+            const w = Math.round(obs.width);
+            const h = Math.round(obs.height);
+
+            ctx.fillStyle = '#ff2a2a';
+            ctx.fillRect(x + 3, y - 1, w - 6, h + 2);
+            ctx.fillRect(x - 1, y + 3, w + 2, h - 6);
+            ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+
+            ctx.fillStyle = '#3f3f46';
+            ctx.fillRect(x + 4, y + 1, w - 8, h - 2);
+            ctx.fillRect(x + 1, y + 4, w - 2, h - 8);
+
+            ctx.fillStyle = '#18181b';
+            ctx.fillRect(x + 6, y + 6, 4, 4);
+            if (w > 26) ctx.fillRect(x + w - 11, y + h - 10, 3, 3);
+
+            drawRedHPBar(x, y + h + 3, w, obs.hp, obs.maxHp);
+        }
+
+        function drawStageEnemyShip(en) {
+            const x = Math.round(en.x);
+            const y = Math.round(en.y);
+
+            if (en.kind === 'kamikaze') {
+                drawMatrix(ALIEN_UFO, x - 2, y, 2, '#ff2a2a');
+                drawMatrix(ALIEN_UFO, x + 2, y, 2, '#ff2a2a');
+                drawMatrix(ALIEN_UFO, x, y - 2, 2, '#ff2a2a');
+                drawMatrix(ALIEN_UFO, x, y + 2, 2, '#ff2a2a');
+
+                drawMatrix(ALIEN_UFO, x, y, 2, '#cbd5e1');
+                ctx.fillStyle = '#ff2a2a';
+                ctx.fillRect(x + 12, y + 4, 8, 4);
+            } else {
+                // Gunship 1 (Straight) & Gunship 2 (Homing)
+                drawMatrix(GUNSHIP_SPRITE, x - 2, y, 2, '#ff2a2a');
+                drawMatrix(GUNSHIP_SPRITE, x + 2, y, 2, '#ff2a2a');
+                drawMatrix(GUNSHIP_SPRITE, x, y - 2, 2, '#ff2a2a');
+                drawMatrix(GUNSHIP_SPRITE, x, y + 2, 2, '#ff2a2a');
+
+                drawMatrix(GUNSHIP_SPRITE, x, y, 2, en.kind === 'gunship2' ? '#94a3b8' : '#64748b');
+                ctx.fillStyle = en.kind === 'gunship2' ? '#facc15' : '#ff2a2a';
+                ctx.fillRect(x + 6, y + 8, 8, 6);
+            }
+
+            drawRedHPBar(x, y + en.height + 4, en.width, en.hp, en.maxHp);
+        }
+
+// 반원(둥근 돔) 채우기 헬퍼: 현재 fillStyle 색으로 그림
+function fillHalfEllipse(cx, topY, baseY, halfW) {
+    const hgt = baseY - topY;
+    for (let r = 0; r < hgt; r++) {
+        const t = (hgt - (r + 0.5)) / hgt;
+        const half = Math.round(halfW * Math.sqrt(Math.max(0, 1 - t * t)));
+        ctx.fillRect(Math.round(cx - half), Math.round(topY + r), half * 2, 1);
+    }
+}
+        function drawStageBoss(b) {
+            // Tremble offset if Stage 5 Evil Dino is charging ram attack
+            const shakeX = (b.ramState === 'tremble') ? (Math.random() - 0.5) * 8 : 0;
+            const shakeY = (b.ramState === 'tremble') ? (Math.random() - 0.5) * 6 : 0;
+            const x = Math.round(b.x + shakeX);
+            const y = Math.round(b.y + shakeY);
+            const w = b.width;
+            const h = b.height;
+
+            // Mandatory Red Pixel Outline around every Boss
+if (b.bossType !== 'evildino') {
+    ctx.fillStyle = '#ff2a2a';
+    ctx.fillRect(x + 10, y - 2, w - 20, h + 4);
+    ctx.fillRect(x - 2, y + 14, w + 4, h - 28);
+    ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
+}
+            if (b.bossType === 'meteor1' || b.bossType === 'meteor2') {
+                // Giant Meteor Boss Core
+                ctx.fillStyle = b.hitFlashTimer > 0 ? '#ffffff' : '#27272a';
+                ctx.fillRect(x + 12, y + 2, w - 24, h - 4);
+                ctx.fillRect(x + 2, y + 16, w - 4, h - 32);
+                ctx.fillRect(x + 6, y + 6, w - 12, h - 12);
+
+                // Glowing Magma Core & Craters
+                ctx.fillStyle = '#ff2a2a';
+                ctx.fillRect(x + 16, y + 26, 20, 14);
+                ctx.fillStyle = '#fde047';
+                ctx.fillRect(x + 20, y + 30, 8, 6);
+
+                ctx.fillStyle = '#18181b';
+                ctx.fillRect(x + 48, y + 14, 14, 12);
+                ctx.fillRect(x + 44, y + 48, 16, 12);
+            } else if (b.bossType === 'fighter') {
+                // Stage 3 Fighter Jet Boss
+                ctx.fillStyle = b.hitFlashTimer > 0 ? '#ffffff' : '#1e293b';
+                ctx.fillRect(x + 12, y + 4, w - 22, h - 8);
+                ctx.fillRect(x + 2, y + 18, w - 4, h - 36);
+
+                // Swept Wings & Nose Cone
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(x + 30, y - 4, 24, 12);
+                ctx.fillRect(x + 30, y + h - 8, 24, 12);
+                ctx.fillStyle = '#ff2a2a';
+                ctx.fillRect(x - 6, y + h / 2 - 5, 14, 10);
+
+                // Cockpit Canopy
+                ctx.fillStyle = '#fde047';
+                ctx.fillRect(x + 18, y + h / 2 - 7, 16, 14);
+
+                // Telegraph warning line before 3-second laser beam fires
+                if (b.laserChargeTimer > 0 && frameCounter % 4 < 2) {
+                    ctx.fillStyle = 'rgba(255, 42, 42, 0.55)';
+                    ctx.fillRect(0, y + h / 2 - 2, x, 4);
+                }
+                // Active 3-second wide laser beam
+                if (b.laserFireTimer > 0) {
+                    ctx.fillStyle = '#ff2a2a';
+                    ctx.fillRect(0, y + h / 2 - 14, x, 28);
+                    ctx.fillStyle = '#fde047';
+                    ctx.fillRect(0, y + h / 2 - 8, x, 16);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, y + h / 2 - 3, x, 6);
+                }
+            } else {
+              // Stage 5 Final Boss: Rival UFO piloted by Fierce Evil Dino!
+const cx = x + w / 2;
+const hullCol = b.hitFlashTimer > 0 ? '#ffffff' : '#1f2937';
+
+// --- 1) 우주선 모양 붉은 테두리 (둥근 돔 + 넓은 챙 + 좁아지는 선체) ---
+ctx.fillStyle = '#ff2a2a';
+fillHalfEllipse(cx, y + 2, y + 36, 25);        // 돔 테두리
+ctx.fillRect(x + 1, y + 33, w - 2, 4);         // 챙(림) 테두리
+ctx.fillRect(x + 3, y + 36, w - 6, 15);        // 선체 상단 테두리
+ctx.fillRect(x + 12, y + 50, w - 24, 8);       // 선체 중단 테두리
+ctx.fillRect(x + 22, y + 57, w - 44, 6);       // 선체 하단 테두리
+
+// --- 2) 둥근 유리돔 (어두운 바탕 + 초록빛 유리) ---
+ctx.fillStyle = '#0f172a';
+fillHalfEllipse(cx, y + 5, y + 34, 22);
+ctx.fillStyle = 'rgba(34, 197, 94, 0.28)';
+fillHalfEllipse(cx, y + 5, y + 34, 22);
+// 유리 반사광
+ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+ctx.fillRect(Math.round(cx - 15), y + 11, 3, 6);
+ctx.fillRect(Math.round(cx - 12), y + 8, 4, 2);
+
+// --- 3) 돔 안의 악당 다이노 (왼쪽을 바라봄) ---
+ctx.save();
+ctx.translate(x + 54, y + 12);
+ctx.scale(-1.4, 1.4);
+drawMatrix(EVIL_DINO_SPRITE, 0, 0, 1, b.hitFlashTimer > 0 ? '#ffffff' : '#22c55e');
+ctx.fillStyle = '#fde047';
+ctx.fillRect(8, 3, 2, 1);
+ctx.fillStyle = '#ffffff';
+ctx.fillRect(11, 5, 1, 1);
+ctx.restore();
+
+// --- 4) 어두운 선체 (테두리 안쪽을 채움) ---
+ctx.fillStyle = '#374151';
+ctx.fillRect(x + 3, y + 34, w - 6, 2);          // 챙 하이라이트
+ctx.fillStyle = hullCol;
+ctx.fillRect(x + 5, y + 36, w - 10, 14);        // 상단
+ctx.fillRect(x + 14, y + 50, w - 28, 6);        // 중단
+ctx.fillStyle = b.hitFlashTimer > 0 ? '#ffffff' : '#111827';
+ctx.fillRect(x + 24, y + 56, w - 48, 5);        // 하단
+
+// --- 5) 붉은/노란 깜빡이 조명 ---
+[14, 28, 42, 56, 70].forEach(lx => {
+    ctx.fillStyle = frameCounter % 12 < 6 ? '#ff2a2a' : '#fde047';
+    ctx.fillRect(x + lx, y + 41, 4, 3);
+});
+            }
+
+            drawRedHPBar(x, y + h + 5, w, b.hp, b.maxHp);
+
+            ctx.fillStyle = '#ff2a2a';
+            ctx.font = 'bold 9px "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${b.label} (${Math.max(0, b.hp)}/${b.maxHp})`, x + w / 2, y + h + 19);
+        }
+
+        function drawDashWall(wall) {
+            const x = Math.round(wall.x);
+            const y = Math.round(wall.y);
+            const w = Math.round(wall.width);
+            const h = Math.round(wall.height);
+
+            // Indestructible Geometry Dash terrain block with bold red/high-contrast border
+            ctx.fillStyle = '#ff2a2a';
+            ctx.fillRect(x, y, w, h);
+
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
+
+            // Geometric pixel grid pattern inside wall
+            ctx.fillStyle = '#334155';
+            for (let py = y + 6; py < y + h - 6; py += 12) {
+                ctx.fillRect(x + 5, py, w - 10, 4);
+            }
+        }
+
+        function drawHeartPickup(hpItem) {
+            const x = Math.round(hpItem.x);
+            const y = Math.round(hpItem.y + Math.sin(hpItem.bobPhase) * 6);
+
+            // Subtle white pixel halo so floating heart stands out clearly
+            drawMatrix(HEART_FULL, x - 1, y, 2, '#ffffff');
+            drawMatrix(HEART_FULL, x + 1, y, 2, '#ffffff');
+            drawMatrix(HEART_FULL, x, y - 1, 2, '#ffffff');
+            drawMatrix(HEART_FULL, x, y + 1, 2, '#ffffff');
+            drawMatrix(HEART_FULL, x, y, 2, '#ff2a4b');
+        }
+
+        function drawWeaponCrate(crate) {
+            const spec = WEAPONS[crate.type];
+            const x = Math.round(crate.x);
+            const y = Math.round(crate.y + Math.sin(crate.bobPhase) * 6);
+            const w = crate.width;
+            const h = crate.height;
+
+            ctx.fillStyle = spec.borderColor;
+            ctx.fillRect(x + 3, y, w - 6, h);
+            ctx.fillRect(x, y + 3, w, h - 6);
+            ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+
+            ctx.fillStyle = spec.color;
+            ctx.fillRect(x + 4, y + 2, w - 8, h - 4);
+            ctx.fillRect(x + 2, y + 4, w - 4, h - 8);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(x + 5, y + 5, w - 10, h - 10);
+
+            if (crate.type === 'missile') {
+                ctx.fillStyle = '#ffd60a';
+                ctx.fillRect(x + 8, y + 12, 11, 4);
+                ctx.fillStyle = '#ff2a2a';
+                ctx.fillRect(x + 19, y + 13, 3, 2);
+                ctx.fillRect(x + 7, y + 10, 3, 8);
+            } else if (crate.type === 'shotgun') {
+                ctx.fillStyle = '#ff7b00';
+                ctx.fillRect(x + 7, y + 13, 6, 4);
+                ctx.fillRect(x + 12, y + 11, 10, 3);
+                ctx.fillStyle = '#fed7aa';
+                ctx.fillRect(x + 14, y + 14, 5, 2);
+            } else if (crate.type === 'spread') {
+                ctx.fillStyle = '#70e000';
+                ctx.fillRect(x + 7, y + 11, 6, 6);
+                ctx.fillRect(x + 13, y + 10, 9, 2);
+                ctx.fillRect(x + 13, y + 15, 9, 2);
+            }
+        }
+
+        function drawSmoothPixelCircle(cx, cy, r, fillColor, highlightColor) {
+            ctx.fillStyle = fillColor;
+            for (let dy = -r; dy <= r; dy++) {
+                const span = Math.floor(Math.sqrt(r * r - dy * dy));
+                ctx.fillRect(cx - span, cy + dy, span * 2, 1);
+            }
+            // Subtle muted crescent highlight on upper-left
+            ctx.fillStyle = highlightColor;
+            for (let dy = -r + 2; dy <= r - 2; dy++) {
+                const span = Math.floor(Math.sqrt(r * r - dy * dy));
+                const hlWidth = Math.max(1, Math.floor(span * 0.45));
+                ctx.fillRect(cx - span + 2, cy + dy, hlWidth, 1);
+            }
+        }
+
+        function drawBackground() {
+            // Permanent Deep Space Night Sky (#0b0d17)
+            ctx.fillStyle = '#0b0d17';
+            ctx.fillRect(0, 0, logicalWidth, LOGICAL_HEIGHT);
+
+            // Subtle Twinkling Pixel Stars
+            stars.forEach(s => {
+                if ((frameCounter + Math.floor(s.blinkOffset)) % 55 < 46) {
+                    ctx.fillStyle = s.color;
+                    ctx.fillRect(Math.round(s.x), Math.round(s.y), s.size, s.size);
+                }
+            });
+
+            // Smooth, Round, Dark-Shaded Background Planets (Never distract from foreground)
+            planets.forEach(p => {
+                const px = Math.round(p.x);
+                const py = Math.round(p.y);
+                drawSmoothPixelCircle(px, py, p.radius, p.color, p.highlight);
+
+                if (p.hasRing) {
+                    ctx.fillStyle = p.ringColor;
+                    ctx.fillRect(px - p.radius - 7, py - 1, (p.radius + 7) * 2, 2);
+                }
+            });
+
+            // Space Corridor Ceiling & Floor Lines
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(0, CEILING_Y - 2, logicalWidth, 2);
+            ctx.fillRect(0, FLOOR_Y, logicalWidth, 2);
+
+            terrainTicks.forEach(t => {
+                if (t.x < logicalWidth + 20) {
+                    const ty = t.isTop ? (CEILING_Y - 2 - t.offsetY) : (FLOOR_Y + t.offsetY);
+                    ctx.fillRect(Math.round(t.x), Math.round(ty), t.w, 2);
+                }
+            });
+        }
+
+        function drawHUD() {
+            // 1. Top-Left: 3 Bright RED Pixel Hearts
+            for (let i = 0; i < player.maxHearts; i++) {
+                const hx = 12 + i * 23;
+                const hy = 12;
+                if (i < player.hearts) {
+                    drawMatrix(HEART_FULL, hx, hy, 2, '#ff2a4b');
+                    ctx.fillStyle = '#fda4af';
+                    ctx.fillRect(hx + 2, hy + 2, 2, 2);
+                } else {
+                    drawMatrix(HEART_EMPTY, hx, hy, 2, '#475569');
+                }
+            }
+
+            // 2. Weapon & Ammo Box next to Hearts
+            const wSpec = WEAPONS[player.weapon];
+            const boxX = 88;
+            const boxY = 8;
+            const boxW = 94;
+            const boxH = 24;
+
+            ctx.fillStyle = '#161b2e';
+            ctx.fillRect(boxX, boxY, boxW, boxH);
+            ctx.strokeStyle = wSpec.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+            ctx.fillStyle = wSpec.color;
+            if (player.weapon === 'default') {
+                ctx.fillRect(boxX + 8, boxY + 10, 12, 4);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(boxX + 17, boxY + 11, 3, 2);
+            } else if (player.weapon === 'missile') {
+                ctx.fillRect(boxX + 7, boxY + 10, 11, 4);
+                ctx.fillStyle = '#ff2a2a';
+                ctx.fillRect(boxX + 18, boxY + 11, 3, 2);
+            } else if (player.weapon === 'shotgun') {
+                ctx.fillRect(boxX + 7, boxY + 10, 14, 4);
+                ctx.fillStyle = '#fed7aa';
+                ctx.fillRect(boxX + 11, boxY + 13, 5, 2);
+            } else if (player.weapon === 'spread') {
+                ctx.fillRect(boxX + 7, boxY + 9, 13, 2);
+                ctx.fillRect(boxX + 7, boxY + 13, 13, 2);
+            }
+
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'left';
+            if (player.weapon === 'default') {
+                ctx.font = 'bold 15px "Noto Sans KR", sans-serif';
+                ctx.fillText('∞', boxX + 28, boxY + 17);
+            } else {
+                ctx.font = 'bold 10px "Press Start 2P", monospace';
+                ctx.fillText(`x${player.ammo}`, boxX + 25, boxY + 17);
+            }
+
+            // 3. Top-Right (Left of compact speaker icon button): Korean Score Readout
+            const hiStr = String(highScore).padStart(5, '0');
+            const curStr = String(Math.floor(score)).padStart(5, '0');
+
+            ctx.font = 'bold 11px "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'right';
+            const scoreRightX = Math.max(365, logicalWidth - 46);
+
+            const hiLabel = `최고기록 ${hiStr}`;
+            const curLabel = ` / 현재 점수 ${curStr}`;
+
+            const curWidth = ctx.measureText(curLabel).width;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(curLabel, scoreRightX, 24);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillText(hiLabel, scoreRightX - curWidth, 24);
+
+            // 4. Subtle Split-Screen Touch Guide at Start of Run
+            if (currentState === GAME_STATE.PLAYING && input.touchHintAlpha > 0) {
+                ctx.save();
+                ctx.globalAlpha = input.touchHintAlpha * 0.6;
+                ctx.strokeStyle = '#38bdf8';
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(logicalWidth / 2, CEILING_Y + 6);
+                ctx.lineTo(logicalWidth / 2, FLOOR_Y - 6);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#bae6fd';
+                ctx.font = 'bold 10px "Noto Sans KR", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('[ 좌측 터치: 상승 / 2연타 홉 ]', logicalWidth * 0.25, FLOOR_Y - 10);
+                ctx.fillText('[ 우측 터치: 무기 연사 ]', logicalWidth * 0.75, FLOOR_Y - 10);
+                ctx.restore();
+            }
+        }
+
+        function render() {
+            ctx.fillStyle = '#0b0d17';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(0, renderOffsetY);
+            ctx.scale(renderScale, renderScale);
+
+            if (screenShakeTimer > 0) {
+                ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+            }
+
+            // 1. Deep Space Night Background
+            drawBackground();
+
+            // 2. Floating Weapon Crates & Heart Pickups
+            powerups.forEach(drawWeaponCrate);
+            heartPickups.forEach(drawHeartPickup);
+
+            // 3. Geometry Dash Indestructible Walls (Post-Stage-5 Inverted Mode)
+            dashWalls.forEach(drawDashWall);
+            dashHazards.forEach(drawMine);
+
+            // 4. Red-Outlined Enemy Meteors
+            obstacles.forEach(drawEnemyMeteor);
+
+            // 5. Red-Outlined Stage Enemy Ships
+            enemies.forEach(drawStageEnemyShip);
+
+            // 6. Red-Outlined Active Bosses (Stages 1..5)
+            bosses.forEach(drawStageBoss);
+
+            // 7. Player Projectiles
+            projectiles.forEach(p => {
+                const px = Math.round(p.x);
+                const py = Math.round(p.y);
+                if (p.kind === 'missile') {
+                    ctx.fillStyle = '#ffd60a';
+                    ctx.fillRect(px, py, p.width - 4, p.height);
+                    ctx.fillStyle = '#ff2a2a';
+                    ctx.fillRect(px + p.width - 4, py + 1, 4, p.height - 2);
+                } else {
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(px, py, p.width, p.height);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(px + p.width - 4, py + 1, 3, Math.max(1, p.height - 2));
+                }
+            });
+
+            // 8. Enemy & Evil Dino Projectiles (Reddish filter / sparkling pixels)
+            enemyProjectiles.forEach(ep => {
+                const ex = Math.round(ep.x);
+                const ey = Math.round(ep.y);
+                const twinkle = Math.floor(ep.sparklePhase) % 2 === 0;
+
+                if (ep.kind === 'evil_laser') {
+                    // Reddish-tinted player laser
+                    ctx.fillStyle = '#ff2a2a';
+                    ctx.fillRect(ex - 1, ey - 1, ep.width + 2, ep.height + 2);
+                    ctx.fillStyle = '#fda4af';
+                    ctx.fillRect(ex, ey, ep.width, ep.height);
+                } else if (ep.kind === 'evil_hmg') {
+                    // Reddish-tinted Heavy Machine Gun round
+                    ctx.fillStyle = '#ff2a2a';
+                    ctx.fillRect(ex - 1, ey - 1, ep.width + 2, ep.height + 2);
+                    ctx.fillStyle = '#fdba74';
+                    ctx.fillRect(ex, ey, ep.width, ep.height);
+                } else if (ep.kind === 'evil_missile' || ep.kind === 'boss_missile') {
+                    // Reddish-tinted missile
+                    ctx.fillStyle = '#ff2a2a';
+                    ctx.fillRect(ex - 1, ey - 1, ep.width + 2, ep.height + 2);
+                    ctx.fillStyle = '#fef08a';
+                    ctx.fillRect(ex + 4, ey, ep.width - 4, ep.height);
+                } else if (ep.kind === 'evil_spread') {
+                    // Reddish-tinted 3-way beam
+                    ctx.fillStyle = '#ff2a2a';
+                    ctx.fillRect(ex - 1, ey - 1, ep.width + 2, ep.height + 2);
+                    ctx.fillStyle = '#bef264';
+                    ctx.fillRect(ex, ey, ep.width, ep.height);
+                } else if (ep.kind === 'homing_fast') {
+                    // Fast homing projectile from Stage 3+ Gunship 2
+                    ctx.fillStyle = '#ff2a2a';
+                    ctx.fillRect(ex - 1, ey - 1, ep.width + 2, ep.height + 2);
+                    ctx.fillStyle = twinkle ? '#fde047' : '#ffffff';
+                    ctx.fillRect(ex, ey + 1, ep.width, ep.height - 2);
+                } else {
+                    // Sparkling pixel shot
+                    ctx.fillStyle = twinkle ? '#ff2a2a' : '#fde047';
+                    ctx.fillRect(ex - 2, ey + 2, ep.width + 4, ep.height - 4);
+                    ctx.fillRect(ex + 2, ey - 2, ep.width - 4, ep.height + 4);
+                    ctx.fillStyle = twinkle ? '#ffffff' : '#ff2a2a';
+                    ctx.fillRect(ex + 1, ey + 1, ep.width - 2, ep.height - 2);
+                }
+            });
+if (endingPhase > 0) drawMomUFO();
+            // 9. Player Dino UFO
+            drawPlayerUFODino();
+
+            // 10. Pixel Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+            });
+
+            // 11. Floating Pick-up / Stage Notifications
+            floatingTexts.forEach(ft => {
+                ctx.fillStyle = ft.color;
+                ctx.font = 'bold 10px "Noto Sans KR", sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(ft.text, Math.round(ft.x), Math.round(ft.y));
+            });
+
+            // 12. Top HUD
+            drawHUD();
+
+            ctx.restore();
+
+            // Post-Stage-5 Final Boss Victory: Full Screen Pixel Color Inversion!
+            if (isInvertedMode && currentState === GAME_STATE.PLAYING) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'difference';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // 11. MAIN ANIMATION LOOP & UI CONTROLS
+        // ==========================================
+        let lastTimestamp = 0;
+        function gameLoop(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
+            lastTimestamp = timestamp;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('retryBtn').addEventListener('click', tryRestart);
+
+        const soundBtn = document.getElementById('soundBtn');
+        const speakerWaves = document.getElementById('speakerWaves');
+        const speakerSlash = document.getElementById('speakerSlash');
+        soundBtn.addEventListener('click', () => {
+            audio.enabled = !audio.enabled;
+            if (audio.enabled) {
+                soundBtn.classList.remove('border-[#64748b]', 'opacity-70');
+                soundBtn.classList.add('border-[#38bdf8]');
+                speakerWaves.classList.remove('hidden');
+                speakerSlash.classList.add('hidden');
+                audio.init();
+            } else {
+                soundBtn.classList.remove('border-[#38bdf8]');
+                soundBtn.classList.add('border-[#64748b]', 'opacity-70');
+                speakerWaves.classList.add('hidden');
+                speakerSlash.classList.remove('hidden');
+            }
+        });
+        function releaseAllInputs() {
+            input.leftTouches.clear();
+            input.rightTouches.clear();
+            input.leftKeys.clear();
+            input.rightKeys.clear();
+            input.leftMouseDown = false;
+            input.rightMouseDown = false;
+        }
+        document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAllInputs(); });
+        window.addEventListener('blur', releaseAllInputs);
+        // ===== 지뢰 생성 =====
+        function spawnMine() {
+            if (Math.random() > 0.65) return; // 벽 세트의 65%에만 지뢰 등장
+            const size = 24;
+            const mineX = logicalWidth + 44;
+            const halfGap = 58; // 통로 최소 높이(116)의 절반
+            const topY = lastCorridorCenterY - halfGap + 4;
+            const botY = lastCorridorCenterY + halfGap - 4 - size;
+            const order = Math.random() < 0.5 ? [topY, botY] : [botY, topY];
+
+            for (const y of order) {
+                const mine = {
+                    x: mineX,
+                    y: y,
+                    width: size,
+                    height: size,
+                    hp: 4,
+                    maxHp: 4,
+                    pulse: Math.random() * 6
+                };
+                // 벽과 겹치면 반대쪽에 시도, 둘 다 안 되면 생략
+                if (!dashWalls.some(w => rectsOverlap(mine, w, 0))) {
+                    dashHazards.push(mine);
+                    return;
+                }
+            }
+        }
+
+        // ===== 지뢰 그리기 =====
+        function drawMine(m) {
+            const x = Math.round(m.x);
+            const y = Math.round(m.y);
+            const w = m.width;
+            const h = m.height;
+            const blink = Math.floor(m.pulse) % 2 === 0;
+
+            // 가시 + 붉은 테두리
+            ctx.fillStyle = '#ff2a2a';
+            ctx.fillRect(x + 10, y - 4, 4, 4);
+            ctx.fillRect(x + 10, y + h, 4, 4);
+            ctx.fillRect(x - 4, y + 10, 4, 4);
+            ctx.fillRect(x + w, y + 10, 4, 4);
+            ctx.fillRect(x + 3, y, w - 6, h);
+            ctx.fillRect(x, y + 3, w, h - 6);
+
+            // 본체
+            ctx.fillStyle = '#3f3f46';
+            ctx.fillRect(x + 4, y + 2, w - 8, h - 4);
+            ctx.fillRect(x + 2, y + 4, w - 4, h - 8);
+
+            // 깜빡이는 중심부
+            ctx.fillStyle = blink ? '#fde047' : '#ff2a2a';
+            ctx.fillRect(x + 9, y + 9, 6, 6);
+
+            drawRedHPBar(x, y + h + 5, w, m.hp, m.maxHp);
+        }
+        window.onload = function () {
+            initBackground();
+            resizeCanvas();
+            updatePlayerAnchorX();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
