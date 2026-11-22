@@ -1,0 +1,15 @@
+{
+  "name": "이립전설",
+  "short_name": "이립전설",
+  "description": "이립전설 일기장",
+  "start_url": "/diary/",
+  "scope": "/diary/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f5f0",
+  "theme_color": "#8c7b6c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
