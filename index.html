@@ -5482,7 +5482,7 @@ function setWsButtons(show) {
     B.appendChild(tr);
 
     const hr = mk('div', 'pe-row pe-sec');
-    hr.appendChild(mk('span', 'pe-label', '루틴 생성'));
+    hr.appendChild(mk('span', 'pe-label', '루틴 생성 (꾹 눌러 이동)'));
     const add = mk('button', 'pe-icon', '＋');
     add.onclick = () => askText('소제목 (루틴 명칭)', '', v => {
       peDraft.routines.push({ id: uid(), name: v, on: true, startDate: ymd(new Date()), seq: [] });
@@ -5492,8 +5492,10 @@ function setWsButtons(show) {
     B.appendChild(hr);
 
     if (!peDraft.routines.length) B.appendChild(mk('div', 'pe-hint', '＋를 눌러 루틴을 만들어 보세요.'));
-    peDraft.routines.forEach(r => {
-      const row = mk('div', 'pe-row pe-item');
+    const rtList = mk('div', 'pe-list');
+    rtList.id = 'peRoutineList';
+    peDraft.routines.forEach((r, ri) => {
+      const row = mk('div', 'pe-row pe-item pe-seq');
       const cb = mk('input'); cb.type = 'checkbox'; cb.checked = r.on;
       cb.onchange = () => { r.on = cb.checked; };
       row.appendChild(cb);
@@ -5504,8 +5506,10 @@ function setWsButtons(show) {
       const dots = mk('button', 'pe-icon', '⁝');
       dots.onclick = () => peRoutineMenu(r);
       row.appendChild(dots);
-      B.appendChild(row);
+      peAttachDrag(row, peDraft.routines, ri, '#peRoutineList .pe-seq');
+      rtList.appendChild(row);
     });
+    B.appendChild(rtList);
 
     if (!peIsNew) {
       const del = mk('button', 'pe-del', '루틴 폴더 삭제');
@@ -5593,7 +5597,7 @@ function setWsButtons(show) {
       const dots = mk('button', 'pe-icon', '⁝');
       dots.onclick = () => peItemMenu(r, i);
       row.appendChild(dots);
-      peAttachDrag(row, r, i);
+      peAttachDrag(row, r.seq, i, '#peList .pe-seq');
       list.appendChild(row);
     });
     B.appendChild(list);
@@ -5621,11 +5625,11 @@ function setWsButtons(show) {
 
   // 꾹 눌러 순서 이동
   let peDrag = null;
-  function peAttachDrag(row, r, i) {
+  function peAttachDrag(row, arr, i, sel) {
     row.addEventListener('contextmenu', e => e.preventDefault());
     row.addEventListener('pointerdown', e => {
-      if (e.target.closest('button')) return;
-      const st = { row, r, i, sx: e.clientX, sy: e.clientY, active: false, timer: null };
+      if (e.target.closest('button, input')) return;
+      const st = { row, arr, i, sel, sx: e.clientX, sy: e.clientY, active: false, timer: null };
       st.timer = setTimeout(() => { st.active = true; row.classList.add('dragging'); if (navigator.vibrate) navigator.vibrate(20); }, 300);
       peDrag = st;
     });
@@ -5646,10 +5650,10 @@ function setWsButtons(show) {
     peDrag = null;
     if (!st.active) return;
     if (!cancel) {
-      const rows = Array.from(document.querySelectorAll('#peList .pe-seq')).filter(x => x !== st.row);
+      const rows = Array.from(document.querySelectorAll(st.sel)).filter(x => x !== st.row);
       const n = rows.filter(x => { const b = x.getBoundingClientRect(); return b.top + b.height / 2 < e.clientY; }).length;
-      const [m] = st.r.seq.splice(st.i, 1);
-      st.r.seq.splice(n, 0, m);
+      const [m] = st.arr.splice(st.i, 1);
+      st.arr.splice(n, 0, m);
     }
     renderPE();
   }
