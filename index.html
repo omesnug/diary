@@ -6,6 +6,7 @@
   <title>이립전설</title>
   <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#8c7b6c">
+  <meta name="color-scheme" content="only light">
   <!-- 구글 로그인 공식 SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
@@ -14,6 +15,7 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 
     :root {
+       color-scheme: only light;
       --bg-color: #f7f5f0;
       --card-bg: #ffffff;
       --text-main: #2c2c2c;
@@ -3683,6 +3685,32 @@ function fetchGoogleUserInfo(token) {
     calSelected = ymd(calToday);
     renderCalendar();
   }
+    // ===== 달력 좌우로 밀어서 월 이동 =====
+  (function () {
+    const view = document.getElementById('calendarView');
+    let sx = 0, sy = 0, t0 = 0, tracking = false;
+
+    view.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { tracking = false; return; }
+      if (e.target.closest('input, select, textarea')) { tracking = false; return; }
+      const t = e.touches[0];
+      // 화면 가장자리에서 시작한 밀기는 안드로이드 뒤로가기 제스처와 겹치므로 제외
+      if (t.clientX < 24 || t.clientX > window.innerWidth - 24) { tracking = false; return; }
+      sx = t.clientX; sy = t.clientY; t0 = Date.now(); tracking = true;
+    }, { passive: true });
+
+    view.addEventListener('touchend', (e) => {
+      if (!tracking) return;
+      tracking = false;
+      if (view.classList.contains('searching')) return;   // 검색 중에는 이동하지 않음
+      const t = e.changedTouches[0];
+      const dx = t.clientX - sx, dy = t.clientY - sy;
+      // 가로로 충분히 밀었고, 세로 스크롤보다 가로 움직임이 확실히 클 때만 이동
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (Date.now() - t0 > 700) return;                   // 너무 느린 움직임은 무시
+      calShift(dx < 0 ? 1 : -1);                           // 왼쪽으로 밀면 다음 달, 오른쪽이면 이전 달
+    }, { passive: true });
+  })();
 
   // ===== 구글 일정 ON/OFF =====
   function gcalOn() { return localStorage.getItem('gcalOff') !== '1'; }
