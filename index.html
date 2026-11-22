@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>이립전설</title>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8c7b6c">
   <!-- 구글 로그인 공식 SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
@@ -6147,6 +6149,9 @@ function setWsButtons(show) {
   })();
  // 새로고침 후 로그인 복원
   window.addEventListener('load', restoreLogin);
+  if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js').catch(() => {});
+}
 </script>
 </body>
 </html>
